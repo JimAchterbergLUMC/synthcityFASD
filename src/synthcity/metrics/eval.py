@@ -58,6 +58,7 @@ from .eval_statistical import (
     SurvivalKMDistance,
     WassersteinDistance,
 )
+from .eval_attacks import DataLeakageLinear, DataLeakageMLP, DataLeakageXGB
 from .scores import ScoreEvaluator
 
 standard_metrics = [
@@ -100,6 +101,10 @@ standard_metrics = [
     DomiasMIABNAF,  # TODO: This takes too long to include as default
     DomiasMIAKDE,
     DomiasMIAPrior,
+    # attribute inference attacks
+    DataLeakageLinear,
+    DataLeakageMLP,
+    DataLeakageXGB,
 ]
 
 
@@ -200,26 +205,15 @@ class Metrics:
         if metrics is None:
             metrics = Metrics.list()
 
-        """
-        We need to encode the categorical data in the real and synthetic data.
-        To ensure each category in the two datasets are mapped to the same one hot vector, we merge X_syn into X_gt for computing the encoder.
-        TODO: Check whether the optional datasets also need to be taking into account when getting the encoder.
-        """
-        X_gt_df = X_gt.dataframe()
-        X_syn_df = X_syn.dataframe()
-        X_enc = create_from_info(pd.concat([X_gt_df, X_syn_df]), X_gt.info())
-        _, encoders = X_enc.encode()
-
-        # now we encode the data
-        X_gt, _ = X_gt.encode(encoders)
-        X_syn, _ = X_syn.encode(encoders)
+        X_gt, _ = X_gt.encode()
+        X_syn, _ = X_syn.encode()
 
         if X_train:
-            X_train, _ = X_train.encode(encoders)
+            X_train, _ = X_train.encode()
         if X_ref_syn:
-            X_ref_syn, _ = X_ref_syn.encode(encoders)
+            X_ref_syn, _ = X_ref_syn.encode()
         if X_augmented:
-            X_augmented, _ = X_augmented.encode(encoders)
+            X_augmented, _ = X_augmented.encode()
 
         scores = ScoreEvaluator()
 

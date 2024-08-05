@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 # third party
 import numpy as np
+import pandas as pd
 from pydantic import validate_arguments
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.preprocessing import LabelEncoder
@@ -64,11 +65,16 @@ class AttackEvaluator(MetricEvaluator):
             target = X_syn[col]
             keys_data = X_syn.drop(columns=[col])
 
+            test_target = X_gt[col]
+            test_keys_data = X_gt.drop(columns=[col])
             # TODO: use a common limit for categorical features
             if len(target.unique()) < 15:
                 task_type = "classification"
                 encoder = LabelEncoder()
-                target = encoder.fit_transform(target)
+                # encode target labels of train and test together, to handle situation when synthetic data does not generate all labels
+                encoder.fit(pd.concat([target, test_target], axis=0))
+                target = encoder.transform(target)
+                test_target = encoder.transform(test_target)
                 if "n_units_out" in classifier_args:
                     classifier_args["n_units_out"] = len(np.unique(target))
                 model = classifier_template(**classifier_args)
@@ -77,12 +83,6 @@ class AttackEvaluator(MetricEvaluator):
                 model = regressor_template(**regressor_args)
 
             model.fit(keys_data.values, np.asarray(target))
-
-            test_target = X_gt[col]
-            if task_type == "classification":
-                test_target = encoder.transform(test_target)
-
-            test_keys_data = X_gt.drop(columns=[col])
 
             preds = model.predict(test_keys_data.values)
 
@@ -93,7 +93,11 @@ class AttackEvaluator(MetricEvaluator):
         if len(output) == 0:
             return {}
 
-        results = {self._reduction: self.reduction()(output)}
+        # results = {self._reduction: self.reduction()(output)}
+        results = {}
+        for num, col in enumerate(X_gt.sensitive_features):
+            self.col = col
+            results[self.col] = output[num]
 
         save_to_file(cache_file, results)
 

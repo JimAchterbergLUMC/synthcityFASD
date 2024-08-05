@@ -94,6 +94,8 @@ class TVAEPlugin(Plugin):
     def __init__(
         self,
         n_iter: int = 1000,
+        fasd: bool = False,
+        fasd_args: dict = {},
         n_units_embedding: int = 500,
         lr: float = 1e-3,
         weight_decay: float = 1e-5,
@@ -129,6 +131,8 @@ class TVAEPlugin(Plugin):
             compress_dataset=compress_dataset,
             **kwargs
         )
+        self.fasd = fasd
+        self.fasd_args = fasd_args
         self.n_units_embedding = n_units_embedding
         self.decoder_n_layers_hidden = decoder_n_layers_hidden
         self.decoder_n_units_hidden = decoder_n_units_hidden
@@ -195,6 +199,8 @@ class TVAEPlugin(Plugin):
 
         self.model = TabularVAE(
             X.dataframe(),
+            fasd=self.fasd,
+            fasd_args=self.fasd_args,
             cond=cond,
             n_units_embedding=self.n_units_embedding,
             batch_size=self.batch_size,
