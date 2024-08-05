@@ -1,3 +1,5 @@
+This fork adds the possibility for FASD, as introduced by the paper ... 
+
 <h2 align="center">
   <img src="https://github.com/vanderschaarlab/synthcity/raw/main/docs/logo.png" height="150px">
 
