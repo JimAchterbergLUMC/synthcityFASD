@@ -527,7 +527,7 @@ class PATEGANPlugin(Plugin):
         ]
 
     def _fit(self, X: DataLoader, *args: Any, **kwargs: Any) -> "PATEGANPlugin":
-        self.model.fit(X.dataframe())
+        self.model.fit(X)
 
         return self
 

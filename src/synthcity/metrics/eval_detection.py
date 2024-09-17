@@ -98,11 +98,12 @@ class DetectionEvaluator(MetricEvaluator):
                 return len(text[1].rstrip("0"))
             return 0
 
-        precision_dict = {}
-        for col in [x for x in gt.columns if x not in discrete]:
-            precision_dict[col] = gt[col].apply(count_decimals).max()
-        for col, precision in precision_dict.items():
-            syn[col] = syn[col].round(precision)
+        if not "n_units_out" in model_args:
+            precision_dict = {}
+            for col in [x for x in gt.columns if x not in discrete]:
+                precision_dict[col] = gt[col].apply(count_decimals).max()
+            for col, precision in precision_dict.items():
+                syn[col] = syn[col].round(precision)
 
         # get data and labels
         data = pd.concat([gt, syn], ignore_index=True)
@@ -120,10 +121,12 @@ class DetectionEvaluator(MetricEvaluator):
             test_data = data.loc[test_idx]
             test_labels = labels[test_idx]
 
-            # preprocess (especially relevant for non XGB)
-            train_data, test_data = preprocess_prediction(
-                train=train_data, test=test_data, discrete_features=discrete
-            )
+            # preprocess
+            # TBD: fix MLP, workaround is not using MLP metric
+            if not "n_units_out" in model_args:
+                train_data, test_data = preprocess_prediction(
+                    train=train_data, test=test_data, discrete_features=discrete
+                )
 
             model = model_template(**model_args).fit(
                 np.asarray(train_data).astype(float), train_labels

@@ -17,7 +17,7 @@ X = dataset.data.features
 y = dataset.data.targets
 
 df = preprocess(X=X, y=y, config=config)
-# df, _ = train_test_split(df, stratify=df["target"], train_size=0.1, random_state=1)
+df, _ = train_test_split(df, stratify=df["target"], train_size=0.01, random_state=1)
 
 # setup dataloader
 X_r = GenericDataLoader(
@@ -62,18 +62,23 @@ score = Benchmarks.evaluate(
         #     "distant_values_probability",
         # ],
         "stats": [
-            "jensenshannon_dist",
+            # "jensenshannon_dist",
             # "chi_squared_test",
             # "feature_corr",
             # "inv_kl_divergence",
             # "ks_test",
-            "max_mean_discrepancy",
-            "wasserstein_dist",
+            # "max_mean_discrepancy",
+            # "wasserstein_dist",
             # "prdc",
-            "alpha_precision",
+            # "alpha_precision",
             # "survival_km_distance",
         ],
-        "performance": ["linear_model", "mlp", "xgb", "feat_rank_distance"],
+        "performance": [
+            # "linear_model",
+            # "mlp",
+            "xgb",
+            # "feat_rank_distance"
+        ],
         "detection": [
             "detection_xgb",
             # "detection_mlp",
@@ -81,11 +86,11 @@ score = Benchmarks.evaluate(
             # "detection_linear",
         ],
         "privacy": [
-            "delta-presence",
-            "k-anonymization",
-            "k-map",
-            "distinct l-diversity",
-            "identifiability_score",
+            # "delta-presence",
+            # "k-anonymization",
+            # "k-map",
+            # "distinct l-diversity",
+            # "identifiability_score",
             # "DomiasMIA_BNAF",
             # "DomiasMIA_KDE",
             # "DomiasMIA_prior",
@@ -97,7 +102,7 @@ score = Benchmarks.evaluate(
         ],
     },
     synthetic_size=len(df),
-    repeats=10,
+    repeats=1,
     synthetic_cache=False,
     synthetic_reuse_if_exists=False,
     use_metric_cache=False,
