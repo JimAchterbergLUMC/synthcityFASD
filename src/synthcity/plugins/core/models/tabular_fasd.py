@@ -168,9 +168,9 @@ class TabularFASD(nn.Module):
         self.fasd_model.fit(X_enc, y_enc)
         X_rep = self.fasd_model.encode(X_enc)
 
-        # standardise representations
+        # fit a passthrough encoder to get input data layout for VAE
         self.encoder = TabularEncoder(
-            continuous_encoder="standard",
+            continuous_encoder="passthrough",
             cont_encoder_params={},
             categorical_encoder="passthrough",
             cat_encoder_params={},
@@ -202,8 +202,9 @@ class TabularFASD(nn.Module):
         )
         self.fasd_decoder.fit(X_rep, X_enc)
 
-        # set output activation of VAE to none (standard scaled data)
-        decoder_nonlin_out_continuous = "none"
+        # set output activation of VAE (none if representations are standard scaled, tanh if clamped to [-1,1])
+        # decoder_nonlin_out_continuous = "none"
+        decoder_nonlin_out_continuous = "tanh"
 
         # set raw data as representations for conditionals
         X = X_rep.copy()
@@ -372,13 +373,13 @@ class TabularFASD(nn.Module):
         samples = pd.DataFrame(self(count, cond))
 
         # synthesize targets from synthetic representations
-        # however, first decode the standardization, since the predictor saw unstandardized data during training
+        # however, first decode any tabular encoding which was imposed on representations (none for clamped representations)
         y = self.fasd_model.predict(self.encoder.inverse_transform(samples))
         # remove target encoding
         y = self.target_encoder.inverse_transform(y)
 
-        # decode (standardised) synthetic representations to original data space
-        # we do not have to inverse the standardisation, since decoder was trained on standardised representations already
+        # decode synthetic representations to original data space
+        # we do not have to inverse any tabular encoding, since decoder was trained on tabular encoded (if any) representations already
         samples = self.fasd_decoder.decode(samples)
 
         # remove tabular encoding of the reconstructed input features

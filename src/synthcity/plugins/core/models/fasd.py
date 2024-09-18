@@ -97,6 +97,7 @@ class FASD(nn.Module):
         """Forward pass through the network"""
         Xt = self._check_tensor(X)
         Xt = self.encoder(Xt)
+        Xt = torch.clamp(Xt, -1, 1)  # clamp representations to [-1,1]
         Xt = self.predictor(Xt)
         return Xt
 
@@ -184,6 +185,9 @@ class FASD(nn.Module):
 
         # forward pass through encoder
         Xt = self.encoder(Xt)
+
+        # clamp representations to [-1,1]
+        Xt = torch.clamp(Xt, -1, 1)
 
         # turn into dataframe
         X_enc = pd.DataFrame(
