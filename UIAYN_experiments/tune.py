@@ -46,12 +46,7 @@ hp_desired = {
 }
 hp_space = {}
 for plugin, params in hp_desired.items():
-    if plugin == "fasd":
-        plugin_name = "tvae"
-    else:
-        plugin_name = plugin
-
-    hp_ini = Plugins().get(plugin_name).hyperparameter_space()
+    hp_ini = Plugins().get(plugin).hyperparameter_space()
     for hp_ in hp_ini:
         if hp_.name not in params:
             hp_ini = [x for x in hp_ini if x != hp_]
@@ -79,12 +74,21 @@ X_r = GenericDataLoader(
     train_size=0.8,
 )
 
+# save best hparams in separate files
+hparam_path = f"UIAYN_experiments/hparams/{ds}"
+if not os.path.exists(hparam_path):
+    os.makedirs(hparam_path)
+
 best_params = {}
 for plugin, hparams in hp_space.items():
 
     def objective(trial: optuna.Trial):
         params = suggest_all(trial, hparams)
         ID = f"trial_{trial.number}"
+
+        # for complex models perhaps not many iterations are required
+        if plugin in ["tvae", "fasd", "ctgan", "adsgan"]:
+            params["n_iter_min"] = 50
 
         # ensure smaller batch size and training epochs are allowed for small datasets
         if len(df) < 1000:
@@ -96,7 +100,7 @@ for plugin, hparams in hp_space.items():
 
         try:
             report = Benchmarks.evaluate(
-                [(ID, plugin_name, params)],
+                [(ID, plugin, params)],
                 X_r,
                 repeats=1,
                 metrics={
@@ -118,14 +122,7 @@ for plugin, hparams in hp_space.items():
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=32)
     best_params[plugin] = study.best_params
-
-    # after tuning a model, clear the workspace to free up space for the next one
-    clear_dir("workspace")
-# save best hparams in separate files
-hparam_path = f"UIAYN_experiments/hparams/{ds}"
-if not os.path.exists(hparam_path):
-    os.makedirs(hparam_path)
-
-for plugin, _ in best_params.items():
     with open(f"{hparam_path}/hparams_{plugin}.json", "w") as file:
         json.dump({plugin: best_params[plugin]}, file)
+    # after tuning a model, clear the workspace to free up space for the next one
+    clear_dir("workspace")
