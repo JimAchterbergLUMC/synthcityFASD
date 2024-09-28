@@ -137,7 +137,7 @@ class TabularFASD(nn.Module):
         )
         self.data_encoder.fit(
             X.drop(self.target_column, axis=1),
-            discrete_columns=column_info["discrete_features"],
+            discrete_columns=column_info["discrete_columns"],
         )
         X_enc = self.data_encoder.transform(X.drop(self.target_column, axis=1))
         self.target_encoder = TabularEncoder(

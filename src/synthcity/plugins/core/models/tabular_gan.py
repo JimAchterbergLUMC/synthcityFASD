@@ -184,7 +184,7 @@ class TabularGAN(torch.nn.Module):
             max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
         ).fit(
             X,
-            discrete_columns=(column_info["discrete_features"]).append(
+            discrete_columns=(column_info["discrete_columns"]).append(
                 column_info["target_column"]
             ),
         )
