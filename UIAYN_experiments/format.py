@@ -217,12 +217,12 @@ def subplot(fig, grid, cur_data, cur_metrics, n_subplot, categories, colors):
 
 if __name__ == "__main__":
 
-    ds = "student"
+    ds = "adult"
 
     metrics = {
         "stats.jensenshannon_dist.marginal": {"name": "JS", "category": "fidelity"},
         "stats.max_mean_discrepancy.joint": {"name": "MMD", "category": "fidelity"},
-        # "stats.wasserstein_dist.joint": {"name": "Wasserstein", "category": "fidelity"},
+        "stats.wasserstein_dist.joint": {"name": "Wasserstein", "category": "fidelity"},
         "stats.alpha_precision.delta_precision_alpha_OC": {
             "name": "a-precision",
             "category": "fidelity",

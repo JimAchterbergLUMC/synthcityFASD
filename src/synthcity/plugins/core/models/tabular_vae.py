@@ -82,7 +82,8 @@ class TabularVAE(nn.Module):
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        X_gt: DataLoader,
+        X: pd.DataFrame,
+        column_info: dict,
         n_units_embedding: int,
         cond: Optional[Union[pd.DataFrame, pd.Series, np.ndarray]] = None,
         lr: float = 2e-4,
@@ -117,12 +118,16 @@ class TabularVAE(nn.Module):
         patience: int = 20,
     ) -> None:
         super(TabularVAE, self).__init__()
-        X = X_gt.dataframe()
 
         self.columns = X.columns
         self.encoder = TabularEncoder(
             max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
-        ).fit(X, discrete_columns=X_gt.discrete_features)
+        ).fit(
+            X,
+            discrete_columns=(column_info["discrete_features"]).append(
+                column_info["target_column"]
+            ),
+        )
 
         n_units_conditional = 0
         self.cond_encoder: Optional[OneHotEncoder] = None

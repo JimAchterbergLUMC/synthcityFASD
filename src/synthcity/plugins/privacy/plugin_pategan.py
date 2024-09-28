@@ -205,9 +205,9 @@ class PATEGAN(Serializable):
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
     def fit(
         self,
-        X_gt: DataLoader,
+        X: DataLoader,
     ) -> Any:
-        X_train = X_gt.dataframe()
+        X_train = X.dataframe()
         self.columns = X_train.columns
 
         if self.delta is None:
@@ -216,7 +216,11 @@ class PATEGAN(Serializable):
         log.info(f"[pategan] using delta = {self.delta}")
 
         self.model = TabularGAN(
-            X_gt,
+            X_train,
+            column_info={
+                "discrete_columns": X.discrete_features,
+                "target_column": X.target_column,
+            },
             n_units_latent=self.generator_n_units_hidden,
             batch_size=self.batch_size,
             generator_n_layers_hidden=self.generator_n_layers_hidden,

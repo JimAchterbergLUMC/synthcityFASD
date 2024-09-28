@@ -213,14 +213,19 @@ class FASDPlugin(Plugin):
             FloatDistribution(name="encoder_dropout", low=0, high=0.2),
         ]
 
-    def _fit(self, X_gt: DataLoader, *args: Any, **kwargs: Any) -> "FASDPlugin":
+    def _fit(self, X: DataLoader, *args: Any, **kwargs: Any) -> "FASDPlugin":
         cond: Optional[Union[pd.DataFrame, pd.Series]] = None
         if "cond" in kwargs:
             cond = kwargs["cond"]
 
         self.model = TabularFASD(
-            X_gt,
+            X.dataframe(),
+            column_info={
+                "discrete_columns": X.discrete_features,
+                "target_column": X.target_column,
+            },
             cond=cond,
+            random_state=self.random_state,
             n_units_embedding=self.n_units_embedding,
             batch_size=self.batch_size,
             lr=self.lr,

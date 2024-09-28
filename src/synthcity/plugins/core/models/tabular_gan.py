@@ -125,7 +125,8 @@ class TabularGAN(torch.nn.Module):
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        X_gt: DataLoader,
+        X: pd.DataFrame,
+        column_info: dict,
         n_units_latent: int,
         cond: Optional[Union[pd.DataFrame, pd.Series, np.ndarray]] = None,
         generator_n_layers_hidden: int = 2,
@@ -173,19 +174,20 @@ class TabularGAN(torch.nn.Module):
         dp_secure_mode: bool = False,
     ) -> None:
         super(TabularGAN, self).__init__()
-        X = X_gt.dataframe()
         self.columns = X.columns
         self.batch_size = batch_size
         self.sample_prob: Optional[np.ndarray] = None
         self._adjust_inference_sampling = adjust_inference_sampling
         n_units_conditional = 0
 
-        if encoder is not None:
-            self.encoder = encoder
-        else:
-            self.encoder = TabularEncoder(
-                max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
-            ).fit(X, discrete_columns=X_gt.discrete_features)
+        self.encoder = TabularEncoder(
+            max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
+        ).fit(
+            X,
+            discrete_columns=(column_info["discrete_features"]).append(
+                column_info["target_column"]
+            ),
+        )
 
         self.cond_encoder: Optional[OneHotEncoder] = None
         if cond is not None:

@@ -83,7 +83,8 @@ class TabularFASD(nn.Module):
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        X_gt: DataLoader,
+        X: pd.DataFrame,
+        column_info: dict,
         n_units_embedding: int,
         cond: Optional[Union[pd.DataFrame, pd.Series, np.ndarray]] = None,
         lr: float = 2e-4,
@@ -128,15 +129,15 @@ class TabularFASD(nn.Module):
         patience: int = 20,
     ) -> None:
         super(TabularFASD, self).__init__()
-        X = X_gt.dataframe()
-        self.target_column = X_gt.target_column
+        self.target_column = column_info["target_column"]
 
         # separately encode X and y
         self.data_encoder = TabularEncoder(
             continuous_encoder="minmax", cont_encoder_params={"feature_range": (-1, 1)}
         )
         self.data_encoder.fit(
-            X.drop(self.target_column, axis=1), discrete_columns=X_gt.discrete_features
+            X.drop(self.target_column, axis=1),
+            discrete_columns=column_info["discrete_features"],
         )
         X_enc = self.data_encoder.transform(X.drop(self.target_column, axis=1))
         self.target_encoder = TabularEncoder(
