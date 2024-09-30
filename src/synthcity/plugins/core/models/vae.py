@@ -60,6 +60,8 @@ class Encoder(nn.Module):
         shared = self.shared(data)
         mu = self.mu_fc(shared)
         logvar = self.logvar_fc(shared)
+        # clamp logvar to avoid numerical instability after exponentiation. [-30,20] inspired from HuggingFace/Diffusers/VAE implementation
+        logvar = torch.clamp(logvar, min=-30, max=20)
         return mu, logvar
 
     def _append_optional_cond(

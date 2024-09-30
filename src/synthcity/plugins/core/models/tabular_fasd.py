@@ -177,10 +177,12 @@ class TabularFASD(nn.Module):
             cat_encoder_params={},
             categorical_limit=2,
         )
-        self.encoder.fit(X_rep)
+        self.encoder.fit(
+            X_rep, discrete_columns=[]
+        )  # no discrete columns in representations
         X_rep = self.encoder.transform(X_rep)
 
-        # train the decoder (standardised representations to original input features)
+        # train the decoder (clamped representations to original input features)
         self.fasd_decoder = FASD_Decoder(
             n_units_in=self.encoder.n_features(),
             n_units_hidden=fasd_decoder_n_units_hidden,  # shallow decoder
@@ -202,10 +204,6 @@ class TabularFASD(nn.Module):
             clipping_value=clipping_value,
         )
         self.fasd_decoder.fit(X_rep, X_enc)
-
-        # set output activation of VAE (none if representations are standard scaled, tanh if clamped to [-1,1])
-        # decoder_nonlin_out_continuous = "none"
-        decoder_nonlin_out_continuous = "tanh"
 
         # set raw data as representations for conditionals
         X = X_rep.copy()
@@ -303,8 +301,8 @@ class TabularFASD(nn.Module):
             decoder_n_units_hidden=decoder_n_units_hidden,
             decoder_nonlin=decoder_nonlin,
             decoder_nonlin_out=self.encoder.activation_layout(
-                discrete_activation=decoder_nonlin_out_discrete,
-                continuous_activation=decoder_nonlin_out_continuous,
+                discrete_activation="tanh",  # only continuous input into VAE
+                continuous_activation="tanh",
             ),
             decoder_batch_norm=decoder_batch_norm,
             decoder_dropout=decoder_dropout,
@@ -370,17 +368,15 @@ class TabularFASD(nn.Module):
         cond: Optional[Union[pd.DataFrame, pd.Series, np.ndarray]] = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
-        # draw (standardised) representations from the VAE
+        # draw clamped representations from the VAE
         samples = pd.DataFrame(self(count, cond))
 
-        # synthesize targets from synthetic representations
-        # however, first decode any tabular encoding which was imposed on representations (none for clamped representations)
+        # predict targets from synthetic representations (remove any tabular encoding on representations, although this is currently none)
         y = self.fasd_model.predict(self.encoder.inverse_transform(samples))
         # remove target encoding
         y = self.target_encoder.inverse_transform(y)
 
-        # decode synthetic representations to original data space
-        # we do not have to inverse any tabular encoding, since decoder was trained on tabular encoded (if any) representations already
+        # decode synthetic (clamped) representations to original data space
         samples = self.fasd_decoder.decode(samples)
 
         # remove tabular encoding of the reconstructed input features
