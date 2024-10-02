@@ -99,9 +99,13 @@ for plugin, hparams in hp_space.items():
                 params["n_teachers"] = 5
 
         try:
+            task_type = "classification"
+            if ds == "student":
+                task_type = "regression"
             report = Benchmarks.evaluate(
                 [(ID, plugin, params)],
                 X_r,
+                task_type=task_type,
                 repeats=1,
                 metrics={
                     "performance": [

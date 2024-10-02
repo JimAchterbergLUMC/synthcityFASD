@@ -928,7 +928,7 @@ class PerformanceEvaluatorMLP(PerformanceEvaluator):
                 "n_units_out": 1,
                 "random_state": self._random_state,
                 "task_type": self._task_type,
-                "n_iter_min": 25,
+                "n_iter_min": 1,
                 "batch_size": 64,
             }
 

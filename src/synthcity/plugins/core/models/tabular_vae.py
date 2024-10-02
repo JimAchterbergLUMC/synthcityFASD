@@ -120,14 +120,14 @@ class TabularVAE(nn.Module):
         super(TabularVAE, self).__init__()
 
         self.columns = X.columns
+        discrete_columns = column_info["discrete_columns"]
+        # attach target column as discrete, if it has 3 or less unique values
+        if X[column_info["target_column"]].nunique() <= 3:
+            discrete_columns.append(column_info["target_column"])
+
         self.encoder = TabularEncoder(
             max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
-        ).fit(
-            X,
-            discrete_columns=(column_info["discrete_columns"]).append(
-                column_info["target_column"]
-            ),
-        )
+        ).fit(X, discrete_columns=discrete_columns)
 
         n_units_conditional = 0
         self.cond_encoder: Optional[OneHotEncoder] = None

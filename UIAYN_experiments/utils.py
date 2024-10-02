@@ -10,10 +10,6 @@ import os
 def preprocess(X: pd.DataFrame, y: pd.DataFrame, config: dict):
     # drop features
     X = X.drop(config["drop"], axis=1)
-
-    # cast numericals
-    X[config["numerical"]] = X[config["numerical"]].astype(float)
-
     y = y.squeeze()
     # dataset specific preprocessing
     if config["name"] == "adult":
@@ -26,9 +22,8 @@ def preprocess(X: pd.DataFrame, y: pd.DataFrame, config: dict):
     elif config["name"] == "heart":
         y = y.apply(lambda x: 1 if x > 0 else 0)
     elif config["name"] == "student":
-        # target is whether student fails the class (grade below 10 out of 20)
         y = y.G3
-        y = y < 10
+        # y = y < 10
     elif config["name"] == "diabetes":
         for col in config["discrete"]:
             # fill missing categories (no missing numericals exist in the dataset)
@@ -37,6 +32,8 @@ def preprocess(X: pd.DataFrame, y: pd.DataFrame, config: dict):
             if X[col].nunique() > 15:
                 X[col] = frequency_encode(X[col])
 
+    # cast numericals
+    X[config["numerical"]] = X[config["numerical"]].astype(float)
     # add y as target to df
     y.name = "target"
     df = pd.concat([X, y], axis=1)

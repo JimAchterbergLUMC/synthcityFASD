@@ -6,8 +6,6 @@ from ucimlrepo import fetch_ucirepo
 from utils import preprocess, plot_df
 from sklearn.model_selection import train_test_split
 
-# first test performance, detection, leakage, preprocessing of generative models on discrete features only
-
 ds = "adult"
 with open("UIAYN_experiments/datasets.json", "r") as f:
     config = json.load(f)
@@ -47,12 +45,14 @@ for name, plugin, params in evaluate:
         if plugin in ["pategan"]:
             params["n_teachers"] = 5
 
-
+task_type = "classification"
+if ds == "student":
+    task_type = "regression"
 # perform benchmarking
 score = Benchmarks.evaluate(
     evaluate,
     X_r,
-    task_type="classification",
+    task_type=task_type,
     metrics={
         # "sanity": [
         #     "data_mismatch",

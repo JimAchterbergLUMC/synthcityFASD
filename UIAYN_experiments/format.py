@@ -3,12 +3,19 @@ import os
 from matplotlib import pyplot as plt
 import seaborn as sns
 import matplotlib.gridspec as gridspec
+import numpy as np
+import seaborn.objects as so
+from scipy.stats import mannwhitneyu
 
 
-def format_table(df, ds, metrics, save_path="UIAYN_experiments/results_formatted"):
-    save_path = save_path + f"/{ds}"
+def format_table(df, metrics, save_path="UIAYN_experiments/results_formatted"):
+    # save_path = save_path + f"/{ds}"
     # Group the DataFrame by 'name'
     grouped = df.groupby("name")
+
+    df.loc[df["name"] == "performance.feat_rank_distance.corr", "direction"] = (
+        "maximize"
+    )
 
     # Create a dictionary to hold the DataFrames
     dfs = {}
@@ -45,25 +52,33 @@ def format_table(df, ds, metrics, save_path="UIAYN_experiments/results_formatted
 
         # cannot attach AIA metrics since these rows do not exist for each column in the table
         # they are dataset specific
-        # if "leakage" in metric:
-        #     metrics.update(
-        #         {
-        #             metric: {
-        #                 "name": "AIA-" + metric.split(".")[-1],
-        #                 "category": "privacy",
-        #             }
-        #         }
-        #     )
+        if "leakage" in metric:
+            metrics.update(
+                {
+                    metric: {
+                        "name": "AIA-" + metric.split(".")[-1],
+                        "category": "privacy",
+                    }
+                }
+            )
 
         # only use the metrics which are contained in the dictionary
+        z = df.groupby("name")["direction"].first()  # .reset_index(drop=False)
+        z = z.map({"minimize": "\u2193", "maximize": "\u2191"}).to_dict()
+
         if metric in metrics.keys():
+            dss = list(table.columns)
             table = table.reset_index()
             # add the statistic to the table
             table["stat"] = [""] * len(table)
-            table = table[["stat", "model", ds]]
+            cols = ["stat", "model"]
+            cols.extend(dss)
+            table = table[cols]
             empty_row = pd.DataFrame([[""] * len(table.columns)], columns=table.columns)
             table = pd.concat([empty_row, table], ignore_index=True)
-            table.iloc[0, 0] = r"\textbf{" + metrics[metric]["name"] + "}"
+            table.iloc[0, 0] = (
+                r"\textbf{" + metrics[metric]["name"] + f" {z[metric]}" + "}"
+            )
 
             # attach to own metric category table
             if metrics[metric]["category"] == "fidelity":
@@ -155,7 +170,7 @@ def format_plot(df, ds, metrics):
 
     plt.suptitle(ds)
     plt.tight_layout()
-    plt.savefig(f"UIAYN_experiments/results_formatted/{ds}/plot_{ds}.png")
+    # plt.savefig(f"UIAYN_experiments/results_formatted/{ds}/plot_{ds}.png")
     plt.show()
 
 
@@ -175,9 +190,6 @@ def subplot(fig, grid, cur_data, cur_metrics, n_subplot, categories, colors):
 
         ax = plt.Subplot(fig, gs_[i])
         y = (cur_data[cur_data["name"] == metric]["mean"]).reset_index(drop=True)
-        print(categories)
-        print(cats)
-        print(y)
         sns.barplot(
             x=cats,
             y=y,
@@ -195,10 +207,16 @@ def subplot(fig, grid, cur_data, cur_metrics, n_subplot, categories, colors):
             worst_bar = cats[y.idxmax()]
             tick = "\u2193"
         for bar, cat in zip(ax.patches, cats):
+
+            # set best and worst bar to green and red
             if cat == best_bar:
                 bar.set_facecolor("green")
             elif cat == worst_bar:
                 bar.set_facecolor("red")
+
+            # highlight FASD
+            if cat == "fasd":
+                bar.set_hatch("//")
 
         ax.set_title(f"{metric} {tick}", fontsize=10)  # Upward arrow
         ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
@@ -215,9 +233,232 @@ def subplot(fig, grid, cur_data, cur_metrics, n_subplot, categories, colors):
         fig.add_subplot(ax)
 
 
+def stripplot(df, metrics):
+    # select data for current dataset
+    data = df
+
+    # attach dataset specific AIA metric
+    for _, row in data[
+        data["name"].str.contains("leakage", case=False, na=False)
+    ].iterrows():
+        metrics.update(
+            {
+                row["name"]: {
+                    "name": "AIA-" + row["name"].split(".")[-1],
+                    "category": "privacy",
+                }
+            }
+        )
+
+    # remove all non used metrics
+    data = data[data["name"].apply(lambda x: x in metrics.keys())]
+
+    # add metric category as column
+    data["category"] = data["name"].map(lambda x: metrics.get(x, {}).get("category", x))
+
+    # map the names to interpretable names
+    data["name"] = data["name"].map(lambda x: metrics.get(x, {}).get("name", x))
+
+    data = data[data["name"] != "Feature Importance"]
+
+    # for each metric in each dataset rank the mean score
+    data["score_rank"] = data.groupby(["ds", "name"]).rank()["mean"]
+    # for direction==maximize invert the ranking so rank of 1 is the best
+    data["score_rank"] = np.where(
+        data["direction"] == "maximize",
+        data.groupby(["ds", "name"])["score_rank"].transform(lambda x: x.max() - x + 1),
+        data["score_rank"],
+    )
+    # plot
+    palette = {
+        "adsgan": "#B2E1F0",  # soft light blue
+        "pategan": "#B3E1B3",  # soft light green
+        "fasd": "red",  # "#FF5733",  # bright red for emphasis
+        "ctgan": "#FFB74D",  # soft orange
+        "tvae": "#D1C4E9",  # soft violet
+    }
+
+    # sns.stripplot(
+    #     data=data,
+    #     x="category",
+    #     y="score_rank",
+    #     hue="model",
+    #     jitter=0.3,
+    #     dodge=True,
+    #     alpha=1,  # Set a default alpha
+    #     palette=palette,
+    # )
+
+    data = data.rename({"ds": "dataset"}, axis=1)
+
+    def fun(x: float, pos: int) -> str:
+        if x == 1:
+            return str(int(x)) + " (Best)"
+        elif x == 5:
+            return str(int(x)) + " (Worst)"
+        else:
+            return str(int(x))
+
+    fig, ax = plt.subplots()
+    markdict = {"adult": "o", "credit": "X", "heart": "v", "student": "^"}
+
+    bar_data = data.groupby(["category", "model"], as_index=False)["score_rank"].mean()
+    bar_data.rename(columns={"score_rank": "mean_score"}, inplace=True)
+
+    # Overlay bar plot indicating density using seaborn.objects
+    (
+        so.Plot(
+            bar_data,
+            x="category",
+            y="mean_score",
+            color="model",
+        )
+        .add(so.Bar(alpha=0.3, edgewidth=0, baseline=6), so.Dodge(), legend=False)
+        .scale(
+            color=so.Nominal(palette),
+        )
+        .on(ax)
+        .plot()
+    )
+
+    (
+        so.Plot(
+            data,
+            x="category",
+            y="score_rank",
+            color="model",
+            marker="dataset",
+        )
+        .add(
+            so.Dot(pointsize=4, edgecolor="gray"),
+            so.Dodge(),
+            so.Jitter(
+                x=0,
+                y=0.5,
+                seed=0,
+            ),
+        )
+        .scale(
+            y=so.Continuous().tick(every=1).label(like=fun),
+            color=so.Nominal(palette),
+            marker=so.Nominal(markdict),
+        )
+        .on(ax)
+        .plot()
+    )
+
+    plt.ylim(0.5, 5.5)
+
+    plt.gca().invert_yaxis()
+
+    # plt.legend(
+    #     loc="upper left",
+    #     bbox_to_anchor=(1, 1),
+    #     title="Model",
+    #     framealpha=1,
+    #     fontsize=11,
+    # )
+    # plt.yticks([5, 4, 3, 2, 1])
+    plt.xlabel("")
+    plt.ylabel("")
+    # plt.title("Ranks of Metric Scores", fontsize=11)
+    plt.savefig(
+        "UIAYN_experiments/results_formatted/rank_fig.png",
+        bbox_inches="tight",
+        pad_inches=0.5,
+    )
+    plt.show()
+
+
+def mann_whitney_tests(df, metrics):
+    data = df
+
+    # attach dataset specific AIA metric
+    for _, row in data[
+        data["name"].str.contains("leakage", case=False, na=False)
+    ].iterrows():
+        metrics.update(
+            {
+                row["name"]: {
+                    "name": "AIA-" + row["name"].split(".")[-1],
+                    "category": "privacy",
+                }
+            }
+        )
+
+    # remove all non used metrics
+    data = data[data["name"].apply(lambda x: x in metrics.keys())]
+
+    # add metric category as column
+    data["category"] = data["name"].map(lambda x: metrics.get(x, {}).get("category", x))
+
+    # map the names to interpretable names
+    data["name"] = data["name"].map(lambda x: metrics.get(x, {}).get("name", x))
+
+    data = data[data["name"] != "Feature Importance"]
+
+    # for each metric in each dataset rank the mean score
+    data["score_rank"] = data.groupby(["ds", "name"]).rank()["mean"]
+    # for direction==maximize invert the ranking so rank of 1 is the best
+    data["score_rank"] = np.where(
+        data["direction"] == "maximize",
+        data.groupby(["ds", "name"])["score_rank"].transform(lambda x: x.max() - x + 1),
+        data["score_rank"],
+    )
+
+    utility_fasd_ranks = data[
+        (data["model"] == "fasd") & (data["category"] == "utility")
+    ]["score_rank"]
+    utility_other_ranks = data[
+        (data["model"] != "fasd") & (data["category"] == "utility")
+    ]["score_rank"]
+
+    # test whether ranks of fasd are lower than those of other methods
+    mw = {}
+    mw_ind = {}
+    for cat in ["fidelity", "utility", "privacy"]:
+        mw_ind[cat] = {}
+
+        stat, pval = mannwhitneyu(
+            data[(data["model"] == "fasd") & (data["category"] == cat)]["score_rank"],
+            data[(data["model"] != "fasd") & (data["category"] == cat)]["score_rank"],
+            alternative="less",
+        )
+        mw_ind[cat] = {"overall": str(stat) + f" ({np.round(pval, 3)})"}
+
+        for model_ in ["pategan", "ctgan", "adsgan", "tvae"]:
+            stat, pval = mannwhitneyu(
+                data[(data["model"] == "fasd") & (data["category"] == cat)][
+                    "score_rank"
+                ],
+                data[(data["model"] == model_) & (data["category"] == cat)][
+                    "score_rank"
+                ],
+                alternative="less",
+            )
+
+            mw_ind[cat][model_] = {"test_statistic": stat, "p-value": np.round(pval, 3)}
+            mw_ind[cat][model_] = str(stat) + f" ({np.round(pval, 3)})"
+
+    # # Flattening the dictionary
+    # mw_ind_ = []
+    # for metric, models in mw_ind.items():
+    #     for model, values in models.items():
+    #         mw_ind_.append(
+    #             {
+    #                 "Metric": metric,
+    #                 "Model": model,
+    #                 "Test Statistic": values["test_statistic"],
+    #                 "P-value": values["p-value"],
+    #             }
+    #         )
+
+    pd.DataFrame(mw_ind).to_csv("UIAYN_experiments/results_formatted/MWU.csv")
+
+
 if __name__ == "__main__":
 
-    ds = "adult"
+    ds = "heart"
 
     metrics = {
         "stats.jensenshannon_dist.marginal": {"name": "JS", "category": "fidelity"},
@@ -285,5 +526,7 @@ if __name__ == "__main__":
     results = results[["name", "mean", "direction", "stddev", "model", "ds"]]
     df = results
 
-    format_table(df, ds=ds, metrics=metrics)
-    format_plot(df, ds, metrics=metrics)
+    format_table(df, metrics=metrics)
+    # format_plot(df, ds, metrics=metrics)
+    stripplot(df, metrics)
+    mann_whitney_tests(df, metrics)

@@ -180,14 +180,14 @@ class TabularGAN(torch.nn.Module):
         self._adjust_inference_sampling = adjust_inference_sampling
         n_units_conditional = 0
 
+        discrete_columns = column_info["discrete_columns"]
+        # attach target column as discrete, if it has 3 or less unique values
+        if X[column_info["target_column"]].nunique() <= 3:
+            discrete_columns.append(column_info["target_column"])
+
         self.encoder = TabularEncoder(
             max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
-        ).fit(
-            X,
-            discrete_columns=(column_info["discrete_columns"]).append(
-                column_info["target_column"]
-            ),
-        )
+        ).fit(X, discrete_columns=discrete_columns)
 
         self.cond_encoder: Optional[OneHotEncoder] = None
         if cond is not None:

@@ -141,7 +141,9 @@ class TabularFASD(nn.Module):
         )
         X_enc = self.data_encoder.transform(X.drop(self.target_column, axis=1))
         self.target_encoder = TabularEncoder(
-            continuous_encoder="minmax", cont_encoder_params={"feature_range": (-1, 1)}
+            continuous_encoder="minmax",
+            cont_encoder_params={"feature_range": (-1, 1)},
+            categorical_limit=3,  # we use binary discrete targets or regression
         )
         self.target_encoder.fit((X[self.target_column]).to_frame())
         y_enc = self.target_encoder.transform((X[self.target_column]).to_frame())

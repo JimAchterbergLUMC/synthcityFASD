@@ -74,15 +74,15 @@ class FASD(nn.Module):
             n_units_out = nonlin_len
 
         if n_units_out > 1:
-            task_type = "classification"
+            self.task_type = "classification"
             self.criterion = nn.CrossEntropyLoss()
         else:
-            task_type = "regression"
+            self.task_type = "regression"
             self.criterion = nn.MSELoss()
         self.predictor = MLP(
             n_units_in=n_units_embedding,
             n_units_out=n_units_out,
-            task_type=task_type,
+            task_type=self.task_type,
             n_layers_hidden=0,  # shallow predictor
             n_units_hidden=0,
             nonlin="none",
@@ -106,9 +106,13 @@ class FASD(nn.Module):
 
         self.target_cols = y.columns
 
-        # stratified validation split
+        stratify = None
+        if self.task_type == "classification":
+            stratify = y
+
+        # validation split
         X, X_val, y, y_val = train_test_split(
-            X, y, stratify=y, train_size=0.8, random_state=self.random_state
+            X, y, stratify=stratify, train_size=0.8, random_state=self.random_state
         )
 
         # create tensor datasets and dataloaders
@@ -144,7 +148,7 @@ class FASD(nn.Module):
             train_loss = 0
             for inputs, targets in loader:
                 outputs = self.forward(inputs)
-                loss = self.criterion(outputs, targets)
+                loss = self.criterion(outputs.float(), targets.float())
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
