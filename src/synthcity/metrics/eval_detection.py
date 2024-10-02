@@ -84,7 +84,7 @@ class DetectionEvaluator(MetricEvaluator):
 
         # if target column is discrete, we need to add it to the list of discrete columns for preprocessing
         discrete = X_gt.discrete_features.copy()
-        if X_gt[X_gt.target_column].nunique() < 4:
+        if X_gt[X_gt.target_column].nunique() < 10:
             discrete.append(X_gt.target_column)
 
         gt, syn = X_gt.dataframe(), X_syn.dataframe()

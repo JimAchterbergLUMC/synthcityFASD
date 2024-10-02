@@ -74,8 +74,8 @@ class AttackEvaluator(MetricEvaluator):
                 task_type = "regression"
                 discrete = X_gt.discrete_features.copy()
 
-            # attach target column as discrete, if 3 or less targets
-            if X_gt[X_gt.target_column].nunique() < 4:
+            # attach target column as discrete, if 10 or less targets
+            if X_gt[X_gt.target_column].nunique() < 10:
                 discrete.append(X_gt.target_column)
 
             # preprocess input data

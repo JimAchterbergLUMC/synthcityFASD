@@ -1,6 +1,50 @@
 {
+    "thyroid": {
+        "name": "thyroid",
+        "loadable":"no",
+        "id": "0",
+        "discrete": [
+            "sex",
+            "thyroxine",
+            "q_thyroxine",
+            "antithyroid_med",
+            "sick",
+            "pregnant",
+            "surgery",
+            "I131",
+            "q_hypothyroid",
+            "q_hyperthyroid",
+            "lithium",
+            "goitre",
+            "tumor",
+            "hypopituitary",
+            "psych",
+            "TSH_m",
+            "T3_m",
+            "TT4_m",
+            "T4U_m",
+            "FTI_m",
+            "TBG_m",
+            "ref"
+        ],
+        "numerical": [
+            "age",
+            "TSH",
+            "T3",
+            "TT4",
+            "T4U",
+            "FTI",
+            "TBG"
+        ],
+        "drop": [],
+        "sensitive": [
+            "age",
+            "sex"
+        ]
+    },
     "diabetes": {
         "name": "diabetes",
+        "loadable":"yes",
         "id": 296,
         "discrete": [
             "race",
@@ -58,6 +102,7 @@
     },
     "heart": {
         "name": "heart",
+        "loadable":"yes",
         "id": 45,
         "discrete": [
             "sex",
@@ -84,6 +129,7 @@
     },
     "student": {
         "name": "student",
+        "loadable":"yes",
         "id": 320,
         "discrete": [
             "school",
@@ -127,6 +173,7 @@
     },
     "adult": {
         "name": "adult",
+        "loadable":"yes",
         "id": 2,
         "discrete": [
             "sex",
@@ -156,6 +203,7 @@
     },
     "credit": {
         "name": "credit",
+        "loadable":"yes",
         "id": 350,
         "discrete": [
             "sex",

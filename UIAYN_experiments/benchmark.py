@@ -6,13 +6,18 @@ from ucimlrepo import fetch_ucirepo
 from utils import preprocess, plot_df
 from sklearn.model_selection import train_test_split
 
-ds = "adult"
+ds = "thyroid"
 with open("UIAYN_experiments/datasets.json", "r") as f:
     config = json.load(f)
 config = config[ds]
-dataset = fetch_ucirepo(id=config["id"])
-X = dataset.data.features
-y = dataset.data.targets
+
+if config["loadable"] == "yes":
+    dataset = fetch_ucirepo(id=config["id"])
+    X = dataset.data.features
+    y = dataset.data.targets
+else:
+    X = None
+    y = None
 
 df = preprocess(X=X, y=y, config=config)
 # df, _ = train_test_split(df, stratify=df["target"], train_size=0.01, random_state=1)

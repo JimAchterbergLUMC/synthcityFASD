@@ -2,12 +2,53 @@ import pandas as pd
 import math
 from matplotlib import pyplot as plt
 import os
+import numpy as np
+from sklearn.impute import SimpleImputer
 
-# make sure that discrete features have max. k features, set in tabular_vae.py
-# or change code of tabular_vae.py such that it takes discrete features as input
 
+def preprocess(X, y, config: dict):
+    # load data if no data supplied
+    if not type(X) == pd.DataFrame:
+        if config["name"] == "thyroid":
+            df = pd.read_csv(
+                "UIAYN_experiments/data/thyroid0387.data", delimiter=",", header=None
+            )
+            cols = [
+                "age",
+                "sex",
+                "thyroxine",
+                "q_thyroxine",
+                "antithyroid_med",
+                "sick",
+                "pregnant",
+                "surgery",
+                "I131",
+                "q_hypothyroid",
+                "q_hyperthyroid",
+                "lithium",
+                "goitre",
+                "tumor",
+                "hypopituitary",
+                "psych",
+                "TSH_m",
+                "TSH",
+                "T3_m",
+                "T3",
+                "TT4_m",
+                "TT4",
+                "T4U_m",
+                "T4U",
+                "FTI_m",
+                "FTI",
+                "TBG_m",
+                "TBG",
+                "ref",
+                "diagnosis",
+            ]
+            df.columns = cols
+            y = df[["diagnosis"]]
+            X = df.drop("diagnosis", axis=1)
 
-def preprocess(X: pd.DataFrame, y: pd.DataFrame, config: dict):
     # drop features
     X = X.drop(config["drop"], axis=1)
     y = y.squeeze()
@@ -32,12 +73,40 @@ def preprocess(X: pd.DataFrame, y: pd.DataFrame, config: dict):
             if X[col].nunique() > 15:
                 X[col] = frequency_encode(X[col])
 
+    elif config["name"] == "thyroid":
+        y = y.apply(encode_diagnosis)
+        X = X.replace({"?": np.nan})
+        for col in config["numerical"]:
+            data = X[[col]].astype(float)
+            imputer = SimpleImputer()
+            data = imputer.fit_transform(data)
+            data = pd.DataFrame(data, columns=imputer.get_feature_names_out([col]))
+            data = data.squeeze()
+            X[col] = data
+
     # cast numericals
     X[config["numerical"]] = X[config["numerical"]].astype(float)
     # add y as target to df
     y.name = "target"
     df = pd.concat([X, y], axis=1)
     return df
+
+
+def encode_diagnosis(row):
+    if row[0] in ["A", "B", "C", "D"]:
+        return "hyperthyroid"
+    elif row[0] in ["E", "F", "G", "H"]:
+        return "hypothyroid"
+    elif row[0] in ["I", "J"]:
+        return "binding protein"
+    elif row[0] in ["K"]:
+        return "general health"
+    elif row[0] in ["L", "M", "N"]:
+        return "replacement therapy"
+    elif row[0] in ["R"]:
+        return "discordant results"
+    else:
+        return "No condition"
 
 
 def frequency_encode(series):

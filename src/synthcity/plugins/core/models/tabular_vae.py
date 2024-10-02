@@ -121,8 +121,8 @@ class TabularVAE(nn.Module):
 
         self.columns = X.columns
         discrete_columns = column_info["discrete_columns"]
-        # attach target column as discrete, if it has 3 or less unique values
-        if X[column_info["target_column"]].nunique() <= 3:
+        # attach target column as discrete, if it has 10 or less unique values
+        if X[column_info["target_column"]].nunique() < 10:
             discrete_columns.append(column_info["target_column"])
 
         self.encoder = TabularEncoder(
