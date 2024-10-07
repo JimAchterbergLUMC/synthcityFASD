@@ -270,12 +270,17 @@ def stripplot(df, metrics):
         data["score_rank"],
     )
     # plot
+    # palette = {
+    #     "adsgan": "#B2E1F0",  # soft light blue
+    #     "pategan": "#B3E1B3",  # soft light green
+    #     "fasd": "red",  # "#FF5733",  # bright red for emphasis
+    #     "ctgan": "#FFB74D",  # soft orange
+    #     "tvae": "#D1C4E9",  # soft violet
+    # }
     palette = {
-        "adsgan": "#B2E1F0",  # soft light blue
-        "pategan": "#B3E1B3",  # soft light green
-        "fasd": "red",  # "#FF5733",  # bright red for emphasis
-        "ctgan": "#FFB74D",  # soft orange
-        "tvae": "#D1C4E9",  # soft violet
+        "fidelity": "gray",  # soft light blue
+        "utility": "black",  # soft light green
+        "privacy": "red",  # "#FF5733",  # bright red for emphasis
     }
 
     # sns.stripplot(
@@ -300,7 +305,13 @@ def stripplot(df, metrics):
             return str(int(x))
 
     fig, ax = plt.subplots()
-    markdict = {"adult": "o", "credit": "X", "heart": "v", "student": "^"}
+    markdict = {
+        "adult": "o",
+        "credit": "X",
+        "obesity": "v",
+        "student": "^",
+        "heart": "<",
+    }
 
     bar_data = data.groupby(["category", "model"], as_index=False)["score_rank"].mean()
     bar_data.rename(columns={"score_rank": "mean_score"}, inplace=True)
@@ -309,9 +320,9 @@ def stripplot(df, metrics):
     (
         so.Plot(
             bar_data,
-            x="category",
+            x="model",
             y="mean_score",
-            color="model",
+            color="category",
         )
         .add(so.Bar(alpha=0.3, edgewidth=0, baseline=6), so.Dodge(), legend=False)
         .scale(
@@ -324,17 +335,17 @@ def stripplot(df, metrics):
     (
         so.Plot(
             data,
-            x="category",
+            x="model",
             y="score_rank",
-            color="model",
+            color="category",
             marker="dataset",
         )
         .add(
-            so.Dot(pointsize=4, edgecolor="gray"),
+            so.Dot(pointsize=4, edgecolor="white"),
             so.Dodge(),
             so.Jitter(
                 x=0,
-                y=0.5,
+                y=0.2,
                 seed=0,
             ),
         )
@@ -363,7 +374,7 @@ def stripplot(df, metrics):
     plt.ylabel("")
     # plt.title("Ranks of Metric Scores", fontsize=11)
     plt.savefig(
-        "UIAYN_experiments/results_formatted/rank_fig.png",
+        "UIAYN_experiments/results_formatted/rank_fig.pdf",
         bbox_inches="tight",
         pad_inches=0.5,
     )
@@ -453,7 +464,9 @@ def mann_whitney_tests(df, metrics):
     #             }
     #         )
 
-    pd.DataFrame(mw_ind).to_csv("UIAYN_experiments/results_formatted/MWU.csv")
+    mw_ind = pd.DataFrame(mw_ind).reset_index(drop=False)
+    mw_ind = mw_ind.rename({"index": "model"}, axis=1)
+    mw_ind.to_csv("UIAYN_experiments/results_formatted/MWU.csv")
 
 
 if __name__ == "__main__":
@@ -462,7 +475,7 @@ if __name__ == "__main__":
 
     metrics = {
         "stats.jensenshannon_dist.marginal": {"name": "JS", "category": "fidelity"},
-        "stats.max_mean_discrepancy.joint": {"name": "MMD", "category": "fidelity"},
+        # "stats.max_mean_discrepancy.joint": {"name": "MMD", "category": "fidelity"},
         "stats.wasserstein_dist.joint": {"name": "Wasserstein", "category": "fidelity"},
         "stats.alpha_precision.delta_precision_alpha_OC": {
             "name": "a-precision",
@@ -529,4 +542,4 @@ if __name__ == "__main__":
     format_table(df, metrics=metrics)
     # format_plot(df, ds, metrics=metrics)
     stripplot(df, metrics)
-    mann_whitney_tests(df, metrics)
+    # mann_whitney_tests(df, metrics)

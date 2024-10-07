@@ -1,7 +1,37 @@
 {
+    "obesity": {
+        "name": "obesity",
+        "loadable": "yes",
+        "id": 544,
+        "discrete": [
+            "sex",
+            "family_history_with_overweight",
+            "FAVC",
+            "FCVC",
+            "CAEC",
+            "SMOKE",
+            "SCC",
+            "TUE",
+            "CALC",
+            "MTRANS"
+        ],
+        "numerical": [
+            "age",
+            "Height",
+            "Weight",
+            "NCP",
+            "CH2O",
+            "FAF"
+        ],
+        "drop": [],
+        "sensitive": [
+            "age",
+            "sex"
+        ]
+    },
     "thyroid": {
         "name": "thyroid",
-        "loadable":"no",
+        "loadable": "no",
         "id": "0",
         "discrete": [
             "sex",
@@ -44,11 +74,11 @@
     },
     "diabetes": {
         "name": "diabetes",
-        "loadable":"yes",
+        "loadable": "yes",
         "id": 296,
         "discrete": [
             "race",
-            "gender",
+            "sex",
             "age",
             "weight",
             "admission_type_id",
@@ -102,7 +132,7 @@
     },
     "heart": {
         "name": "heart",
-        "loadable":"yes",
+        "loadable": "yes",
         "id": 45,
         "discrete": [
             "sex",
@@ -129,41 +159,47 @@
     },
     "student": {
         "name": "student",
-        "loadable":"yes",
-        "id": 320,
+        "loadable": "yes",
+        "id": 697,
         "discrete": [
-            "school",
+            "Marital Status",
+            "Application mode",
+            "Course",
+            "Daytime/evening attendance",
+            "Previous qualification",
+            "Nacionality",
+            "Mother's qualification",
+            "Father's qualification",
+            "Mother's occupation",
+            "Father's occupation",
+            "Displaced",
+            "Educational special needs",
+            "Debtor",
+            "Tuition fees up to date",
             "sex",
-            "address",
-            "famsize",
-            "Pstatus",
-            "Mjob",
-            "Fjob",
-            "reason",
-            "guardian",
-            "schoolsup",
-            "famsup",
-            "paid",
-            "activities",
-            "nursery",
-            "higher",
-            "internet",
-            "romantic"
+            "Scholarship holder",
+            "International"
         ],
         "numerical": [
+            "Application order",
+            "Previous qualification (grade)",
+            "Admission grade",
             "age",
-            "Medu",
-            "Fedu",
-            "traveltime",
-            "studytime",
-            "failures",
-            "famrel",
-            "freetime",
-            "goout",
-            "Dalc",
-            "Walc",
-            "health",
-            "absences"
+            "Curricular units 1st sem (credited)",
+            "Curricular units 1st sem (enrolled)",
+            "Curricular units 1st sem (evaluations)",
+            "Curricular units 1st sem (approved)",
+            "Curricular units 1st sem (grade)",
+            "Curricular units 1st sem (without evaluations)",
+            "Curricular units 2nd sem (credited)",
+            "Curricular units 2nd sem (enrolled)",
+            "Curricular units 2nd sem (evaluations)",
+            "Curricular units 2nd sem (approved)",
+            "Curricular units 2nd sem (grade)",
+            "Curricular units 2nd sem (without evaluations)",
+            "Unemployment rate",
+            "Inflation rate",
+            "GDP"
         ],
         "drop": [],
         "sensitive": [
@@ -173,7 +209,7 @@
     },
     "adult": {
         "name": "adult",
-        "loadable":"yes",
+        "loadable": "yes",
         "id": 2,
         "discrete": [
             "sex",
@@ -203,7 +239,7 @@
     },
     "credit": {
         "name": "credit",
-        "loadable":"yes",
+        "loadable": "yes",
         "id": 350,
         "discrete": [
             "sex",

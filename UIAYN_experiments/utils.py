@@ -63,9 +63,15 @@ def preprocess(X, y, config: dict):
     elif config["name"] == "heart":
         y = y.apply(lambda x: 1 if x > 0 else 0)
     elif config["name"] == "student":
-        y = y.G3
-        # y = y < 10
+        X = X.rename({"Age at enrollment": "age", "Gender": "sex"}, axis=1)
+    elif config["name"] == "obesity":
+        X = X.rename({"Gender": "sex", "Age": "age"}, axis=1)
+        # y = y.str.startswith("Obesity").map({True: "obesity", False: "no_obese"})
+        pass
     elif config["name"] == "diabetes":
+        y = y.apply(lambda x: x if x == "<30" else "No")
+        X = X.rename({"gender": "sex"}, axis=1)
+
         for col in config["discrete"]:
             # fill missing categories (no missing numericals exist in the dataset)
             X[col] = X[col].fillna("missing")
