@@ -7,47 +7,6 @@ from sklearn.impute import SimpleImputer
 
 
 def preprocess(X, y, config: dict):
-    # load data if no data supplied
-    if not type(X) == pd.DataFrame:
-        if config["name"] == "thyroid":
-            df = pd.read_csv(
-                "UIAYN_experiments/data/thyroid0387.data", delimiter=",", header=None
-            )
-            cols = [
-                "age",
-                "sex",
-                "thyroxine",
-                "q_thyroxine",
-                "antithyroid_med",
-                "sick",
-                "pregnant",
-                "surgery",
-                "I131",
-                "q_hypothyroid",
-                "q_hyperthyroid",
-                "lithium",
-                "goitre",
-                "tumor",
-                "hypopituitary",
-                "psych",
-                "TSH_m",
-                "TSH",
-                "T3_m",
-                "T3",
-                "TT4_m",
-                "TT4",
-                "T4U_m",
-                "T4U",
-                "FTI_m",
-                "FTI",
-                "TBG_m",
-                "TBG",
-                "ref",
-                "diagnosis",
-            ]
-            df.columns = cols
-            y = df[["diagnosis"]]
-            X = df.drop("diagnosis", axis=1)
 
     # drop features
     X = X.drop(config["drop"], axis=1)
@@ -64,31 +23,6 @@ def preprocess(X, y, config: dict):
         y = y.apply(lambda x: 1 if x > 0 else 0)
     elif config["name"] == "student":
         X = X.rename({"Age at enrollment": "age", "Gender": "sex"}, axis=1)
-    elif config["name"] == "obesity":
-        X = X.rename({"Gender": "sex", "Age": "age"}, axis=1)
-        # y = y.str.startswith("Obesity").map({True: "obesity", False: "no_obese"})
-        pass
-    elif config["name"] == "diabetes":
-        y = y.apply(lambda x: x if x == "<30" else "No")
-        X = X.rename({"gender": "sex"}, axis=1)
-
-        for col in config["discrete"]:
-            # fill missing categories (no missing numericals exist in the dataset)
-            X[col] = X[col].fillna("missing")
-            # frequency encode high cardinality features
-            if X[col].nunique() > 15:
-                X[col] = frequency_encode(X[col])
-
-    elif config["name"] == "thyroid":
-        y = y.apply(encode_diagnosis)
-        X = X.replace({"?": np.nan})
-        for col in config["numerical"]:
-            data = X[[col]].astype(float)
-            imputer = SimpleImputer()
-            data = imputer.fit_transform(data)
-            data = pd.DataFrame(data, columns=imputer.get_feature_names_out([col]))
-            data = data.squeeze()
-            X[col] = data
 
     # cast numericals
     X[config["numerical"]] = X[config["numerical"]].astype(float)
@@ -96,28 +30,6 @@ def preprocess(X, y, config: dict):
     y.name = "target"
     df = pd.concat([X, y], axis=1)
     return df
-
-
-def encode_diagnosis(row):
-    if row[0] in ["A", "B", "C", "D"]:
-        return "hyperthyroid"
-    elif row[0] in ["E", "F", "G", "H"]:
-        return "hypothyroid"
-    elif row[0] in ["I", "J"]:
-        return "binding protein"
-    elif row[0] in ["K"]:
-        return "general health"
-    elif row[0] in ["L", "M", "N"]:
-        return "replacement therapy"
-    elif row[0] in ["R"]:
-        return "discordant results"
-    else:
-        return "No condition"
-
-
-def frequency_encode(series):
-    freq_map = series.value_counts().to_dict()
-    return series.map(freq_map)
 
 
 def plot_df(df: pd.DataFrame):
