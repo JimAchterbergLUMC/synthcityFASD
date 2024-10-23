@@ -1,6 +1,8 @@
 Repository of the paper entitled: "Utility Is All You Need: fidelity-agnostic synthetic data generation".
 
 Experiments from the paper can be reproduced through the main.py script in the UIAYN_experiments folder. 
+Names of the datasets can be found in the datasets.json file. 
+When reproducing experiments, it is heavily recommended to use GPUs to accelerate the training of the deep learning algorithms.
 
 <h2 align="center">
   <img src="https://github.com/vanderschaarlab/synthcity/raw/main/docs/logo.png" height="150px">
