@@ -1,9 +1,6 @@
 Repository of the paper entitled: "Utility Is All You Need: fidelity-agnostic synthetic data generation".
 
-Experiments from the paper can be reproduced through the scripts in the UIAYN_experiments folder as follows:
-- Perform hyperparameter tuning using the tune.py script
-- Perform benchmarking of SD generators using the benchmark.py script
-- Retrieve properly formatted results using the format.py script
+Experiments from the paper can be reproduced through the main.py script in the UIAYN_experiments folder. 
 
 <h2 align="center">
   <img src="https://github.com/vanderschaarlab/synthcity/raw/main/docs/logo.png" height="150px">
