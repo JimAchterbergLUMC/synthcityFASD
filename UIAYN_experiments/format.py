@@ -303,8 +303,6 @@ def mann_whitney_tests(df, metrics):
 
 if __name__ == "__main__":
 
-    ds = "heart"
-
     metrics = {
         "stats.jensenshannon_dist.marginal": {"name": "JS", "category": "fidelity"},
         # "stats.max_mean_discrepancy.joint": {"name": "MMD", "category": "fidelity"},
@@ -371,9 +369,6 @@ if __name__ == "__main__":
     results = results[["name", "mean", "direction", "stddev", "model", "ds"]]
     df = results
 
-    # format_table(df, metrics=metrics)
-    # format_plot(df, ds, metrics=metrics)
+    format_table(df, metrics=metrics)
     stripplot(df, metrics)
-    # stripplot_new(df, metrics)
-    # mann_whitney_tests(df, metrics)
-    # weighted_z_test(df, metrics)
+    mann_whitney_tests(df, metrics)
