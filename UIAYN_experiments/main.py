@@ -6,8 +6,8 @@ if __name__ == "__main__":
         "fasd",
         "pategan",
         "tvae",
-        #  "ctgan",
-        #  "adsgan",
+        "ctgan",
+        "adsgan",
     ]
 
     tune_params = True

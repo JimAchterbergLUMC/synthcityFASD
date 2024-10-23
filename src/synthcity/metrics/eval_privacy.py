@@ -41,8 +41,7 @@ class PrivacyEvaluator(MetricEvaluator):
     @abstractmethod
     def _evaluate(
         self, X_gt: DataLoader, X_syn: DataLoader, *args: Any, **kwargs: Any
-    ) -> Dict:
-        ...
+    ) -> Dict: ...
 
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
     def evaluate(
@@ -433,8 +432,7 @@ class DomiasMIA(PrivacyEvaluator):
         reference_set: np.ndarray,
         X_test: np.ndarray,
         device: Any,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
     def _evaluate(

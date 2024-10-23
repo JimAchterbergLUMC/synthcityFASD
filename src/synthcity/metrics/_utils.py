@@ -188,12 +188,10 @@ class normal_func_feat:  # TODO: rename with capital letters
 
 class GeneratorInterface(metaclass=ABCMeta):
     @abstractmethod
-    def fit(self, data: pd.DataFrame) -> "GeneratorInterface":
-        ...
+    def fit(self, data: pd.DataFrame) -> "GeneratorInterface": ...
 
     @abstractmethod
-    def generate(self, count: int) -> pd.DataFrame:
-        ...
+    def generate(self, count: int) -> pd.DataFrame: ...
 
 
 # Domias helper functions
