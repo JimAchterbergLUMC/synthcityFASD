@@ -213,18 +213,29 @@ class Metrics:
         """
         X_gt_df = X_gt.dataframe()
         X_syn_df = X_syn.dataframe()
-        X_enc = create_from_info(pd.concat([X_gt_df, X_syn_df]), X_gt.info())
+        # if train and ref syn are not added, some discrete entries may not have been seen before by the encoder
+        X_enc = create_from_info(
+            pd.concat(
+                [
+                    X_gt_df,
+                    X_syn_df,
+                    X_train.dataframe(),
+                    X_ref_syn.dataframe(),
+                    # X_augmented.dataframe(),
+                ]
+            ),
+            X_gt.info(),
+        )
         _, encoders = X_enc.encode()
 
         # now we encode the data
         X_gt, _ = X_gt.encode(encoders)
         X_syn, _ = X_syn.encode(encoders)
 
-        # not used in our metrics
-        # if X_train:
-        #     X_train, _ = X_train.encode(encoders)
-        # if X_ref_syn:
-        #     X_ref_syn, _ = X_ref_syn.encode(encoders)
+        if X_train:
+            X_train, _ = X_train.encode(encoders)
+        if X_ref_syn:
+            X_ref_syn, _ = X_ref_syn.encode(encoders)
         # if X_augmented:
         #     X_augmented, _ = X_augmented.encode(encoders)
 
@@ -250,6 +261,9 @@ class Metrics:
                     X_augmented,
                 )
             elif "DomiasMIA" in metric.name():
+                # reference_size = 10
+                # use half of the test data as reference data, the other half as non-members to training data
+                reference_size = int(0.5 * len(X_gt))
                 scores.queue(
                     metric(
                         reduction=reduction,
@@ -263,7 +277,7 @@ class Metrics:
                     X_syn,
                     X_train,
                     X_ref_syn,
-                    reference_size=10,  # TODO: review this
+                    reference_size=reference_size,  # TODO: review this
                 )
             else:
                 scores.queue(

@@ -1,10 +1,10 @@
 from benchmark import benchmark
 
 if __name__ == "__main__":
-    ds = "heart"
+    ds = "adult"
     models = [
         "fasd",
-        "pategan",
+        # "pategan",
         "tvae",
         "ctgan",
         "adsgan",
@@ -27,6 +27,7 @@ if __name__ == "__main__":
             "k-map",
             "distinct l-diversity",
             "identifiability_score",
+            "DomiasMIA_BNAF",
         ],
         "attack": ["data_leakage_xgb"],
     }

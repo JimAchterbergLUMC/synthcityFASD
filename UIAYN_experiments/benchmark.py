@@ -146,13 +146,15 @@ def benchmark(ds, models, tune_params, metrics, repeats, split=1):
         train_size=train_size,
     )
 
-    # find hparams
     hparam_path = f"UIAYN_experiments/hparams/{ds}"
     if not os.path.exists(hparam_path):
         os.makedirs(hparam_path)
-    tune(X_r, models, tune_params, hparam_path)
 
-    # load plugin params
+    if len(os.listdir(hparam_path)) == 0:
+        # create hparam files, either through tuning or not, if there are no files yet
+        tune(X_r, models, tune_params, hparam_path)
+
+    # load plugin params from json files
     hparams = {}
     for file in os.listdir(hparam_path):
         with open(f"{hparam_path}/{file}", "r") as f:
