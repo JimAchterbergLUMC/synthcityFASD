@@ -11,13 +11,18 @@
 
 # add necessary modules
 module purge 
-module add system/python/3.10.2
-module add library/cuda/11.8.0/gcc.8.5.0
-module add library/cudnn/11.8/cudnn
+module add tools/miniconda/python3.10/23.3.1
+# module add library/cuda/11.8.0/gcc.8.5.0
+# module add library/cudnn/11.8/cudnn
+module add library/cuda/12.2.2/gcc.8.5.0
+module add library/cudnn/12.2/cudnn
 
-source .venv/bin/activate
+# source .venv/bin/activate
+conda deactivate
+conda activate env
 
 # run script
-python3 UIAYN_experiments/benchmark.py
+python UIAYN_experiments/main.py
 
-deactivate
+# deactivate
+conda deactivate

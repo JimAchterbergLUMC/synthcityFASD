@@ -61,6 +61,8 @@ class AttackEvaluator(MetricEvaluator):
             return {}
 
         output = []
+        output_discrete = []
+        output_numerical = []
         for col in X_gt.sensitive_features:
             if col not in X_syn.columns:
                 continue
@@ -124,17 +126,23 @@ class AttackEvaluator(MetricEvaluator):
                     np.asarray(preds),
                     classes=sorted(set(np.asarray(target))),
                 )
+                output_discrete.append(output_)
             else:
                 preds = model.predict(test_keys_data.values)
                 output_ = r2_score(np.asarray(test_target), np.asarray(preds))
+                output_numerical.append(output_)
 
-            output.append(output_)
-
+        output = output_discrete + output_numerical
         if len(output) == 0:
             return {}
 
-        # save results per feature
         results = {}
+        # save average results
+        results[self._reduction] = self.reduction()(output)
+        # save average results for discrete and numerical
+        results["numerical"] = self.reduction()(output_numerical)
+        results["discrete"] = self.reduction()(output_discrete)
+        # save results per feature
         for num, col in enumerate(X_gt.sensitive_features):
             self.col = col
             results[self.col] = output[num]

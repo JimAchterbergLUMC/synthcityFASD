@@ -22,8 +22,19 @@
         ],
         "drop": [],
         "sensitive": [
+            "age",
+            "trestbps",
+            "chol",
+            "thalach",
+            "oldpeak",
             "sex",
-            "age"
+            "cp",
+            "fbs",
+            "restecg",
+            "exang",
+            "slope",
+            "thal",
+            "ca"
         ]
     },
     "student": {
@@ -72,8 +83,42 @@
         ],
         "drop": [],
         "sensitive": [
+            "Marital Status",
+            "Application mode",
+            "Course",
+            "Daytime/evening attendance",
+            "Previous qualification",
+            "Nacionality",
+            "Mother's qualification",
+            "Father's qualification",
+            "Mother's occupation",
+            "Father's occupation",
+            "Displaced",
+            "Educational special needs",
+            "Debtor",
+            "Tuition fees up to date",
+            "sex",
+            "Scholarship holder",
+            "International",
+            "Application order",
+            "Previous qualification (grade)",
+            "Admission grade",
             "age",
-            "sex"
+            "Curricular units 1st sem (credited)",
+            "Curricular units 1st sem (enrolled)",
+            "Curricular units 1st sem (evaluations)",
+            "Curricular units 1st sem (approved)",
+            "Curricular units 1st sem (grade)",
+            "Curricular units 1st sem (without evaluations)",
+            "Curricular units 2nd sem (credited)",
+            "Curricular units 2nd sem (enrolled)",
+            "Curricular units 2nd sem (evaluations)",
+            "Curricular units 2nd sem (approved)",
+            "Curricular units 2nd sem (grade)",
+            "Curricular units 2nd sem (without evaluations)",
+            "Unemployment rate",
+            "Inflation rate",
+            "GDP"
         ]
     },
     "adult": {
@@ -101,9 +146,17 @@
             "marital-status"
         ],
         "sensitive": [
-            "age",
             "sex",
-            "race"
+            "workclass",
+            "relationship",
+            "race",
+            "native-country",
+            "education",
+            "occupation",
+            "age",
+            "capital-gain",
+            "capital-loss",
+            "hours-per-week"
         ]
     },
     "credit": {
@@ -139,8 +192,29 @@
         ],
         "drop": [],
         "sensitive": [
+            "sex",
+            "X3",
+            "X4",
+            "X6",
+            "X7",
+            "X8",
+            "X9",
+            "X10",
+            "X11",
+            "X1",
             "age",
-            "sex"
+            "X12",
+            "X13",
+            "X14",
+            "X15",
+            "X16",
+            "X17",
+            "X18",
+            "X19",
+            "X20",
+            "X21",
+            "X22",
+            "X23"
         ]
     }
 }

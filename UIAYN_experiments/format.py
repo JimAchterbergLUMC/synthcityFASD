@@ -7,6 +7,7 @@ import numpy as np
 import seaborn.objects as so
 from scipy.stats import mannwhitneyu, norm
 import matplotlib.patches as patches
+import json
 
 
 def format_table(df, metrics, save_path="UIAYN_experiments/results_formatted"):
@@ -301,6 +302,106 @@ def mann_whitney_tests(df, metrics):
     mw_ind.to_csv("UIAYN_experiments/results_formatted/MWU.csv")
 
 
+def aia_deepdive_plot(df, ds):
+    data = df[df["ds"] == ds]
+
+    # only retain aia metrics
+    data = data[data["name"].str.startswith("attack")]
+
+    # only retain feature specific aia metrics
+    data = data[~data["name"].str.endswith(".numerical")]
+    data = data[~data["name"].str.endswith(".discrete")]
+    data = data[~data["name"].str.endswith(".mean")]
+
+    # retrieve whether features are numerical or discrete
+    with open("UIAYN_experiments/datasets.json", "r") as f:
+        config = json.load(f)
+    config = config[ds]
+
+    # map features to whether they are numerical or discrete
+    data["name"] = data["name"].str.split(".").str[-1]
+    data["type"] = data["name"]
+
+    def map_to_key(value, dict):
+        for key, values in dict.items():
+            if type(values) == list:
+                if value in values:
+                    return key
+        return None
+
+    data["type"] = data["type"].apply(map_to_key, dict=config)
+
+    # build separate plots for numerical and discrete features
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))  # Adjust size as needed
+
+    for ax, type_ in zip(axs, ["discrete", "numerical"]):
+        d = data[data["type"] == type_]
+
+        # first make bar plot
+        bar_d = d.groupby(["model", "type"], as_index=False)["mean"].mean()
+        b = (
+            so.Plot(
+                bar_d,
+                x="model",
+                y="mean",
+                # color="category",
+            )
+            .add(so.Bar(alpha=0.3, edgewidth=0), so.Dodge(), legend=False)
+            .scale(
+                # color=so.Nominal(palette),
+            )
+        )
+        b.on(ax).plot()
+
+        marker = "o" if type_ == "discrete" else "x"
+        p = (
+            so.Plot(
+                d,
+                x="model",
+                y="mean",
+                color="name",
+            )
+            .add(
+                so.Dot(marker=marker, pointsize=5, edgewidth=0.05, edgecolor="gray"),
+                so.Dodge(),
+            )
+            .scale(
+                # y=so.Continuous().tick(every=1),
+                color=so.Nominal(sns.color_palette("bright")),
+            )
+            .label(
+                x="model",
+                y="mean",
+                color=(
+                    "Discrete Features" if type_ == "discrete" else "Numerical Features"
+                ),
+            )
+        )
+        p.on(ax).plot()
+
+        ax.set_xlabel("")
+        ax.set_ylabel(
+            "AUROC" if type_ == "discrete" else r"$R^2$", rotation="horizontal"
+        )
+        ax.set_title(
+            "Attribute Inference: Discrete Features"
+            if type_ == "discrete"
+            else "Attribute Inference: Numerical Features"
+        )
+
+    # place the legends
+    fig.legends[0].set_bbox_to_anchor((0.9, 0.75))
+    fig.legends[1].set_bbox_to_anchor((0.9, 0.25))
+    # Save the figure
+    output_dir = "UIAYN_experiments/results_formatted"
+    os.makedirs(output_dir, exist_ok=True)
+    plt.savefig(
+        f"{output_dir}/aia_deepdive.pdf",
+        bbox_inches="tight",
+        pad_inches=0.5,
+    )
+
+
 if __name__ == "__main__":
 
     metrics = {
@@ -369,6 +470,7 @@ if __name__ == "__main__":
     results = results[["name", "mean", "direction", "stddev", "model", "ds"]]
     df = results
 
-    format_table(df, metrics=metrics)
-    stripplot(df, metrics)
-    mann_whitney_tests(df, metrics)
+    # format_table(df, metrics=metrics)
+    # stripplot(df, metrics)
+    # mann_whitney_tests(df, metrics)
+    aia_deepdive_plot(df, ds="adult")
