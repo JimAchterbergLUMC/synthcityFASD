@@ -2,8 +2,6 @@ import pandas as pd
 import math
 from matplotlib import pyplot as plt
 import os
-import numpy as np
-from sklearn.impute import SimpleImputer
 
 
 def preprocess(X, y, config: dict):

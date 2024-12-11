@@ -10,6 +10,7 @@ import pandas as pd
 from pydantic import BaseModel, validate_arguments, validator
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.utils.validation import check_is_fitted
 
 # synthcity absolute
 import synthcity.logger as log
@@ -18,6 +19,26 @@ from synthcity.utils.serialization import dataframe_hash
 
 # synthcity relative
 from .factory import get_feature_encoder
+
+
+def frame_preprocessor(df: pd.DataFrame, encoders: list):
+    """
+    Takes dataframe and list of encoders which are to be used per column.
+    If encoder is already fit, apply it, else fit it first.
+    This allows predefined one hot encoder.
+    """
+    encoders_ = encoders.copy()
+    data = []
+    for col, enc in zip(df.columns, encoders_):
+        try:
+            check_is_fitted(enc)
+            d = enc.transform(df[[col]])
+        except:
+            d = enc.fit_transform(df[[col]])
+        d = pd.DataFrame(d, columns=enc.get_feature_names_out())
+        data.append(d)
+    df = pd.concat(data, axis=1)
+    return df
 
 
 def preprocess_prediction(

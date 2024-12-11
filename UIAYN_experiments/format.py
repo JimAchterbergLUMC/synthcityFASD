@@ -353,7 +353,7 @@ def aia_deepdive_plot(df, ds):
         )
         b.on(ax).plot()
 
-        marker = "o" if type_ == "discrete" else "x"
+        marker = "o" if type_ == "discrete" else "v"
         p = (
             so.Plot(
                 d,
@@ -362,7 +362,7 @@ def aia_deepdive_plot(df, ds):
                 color="name",
             )
             .add(
-                so.Dot(marker=marker, pointsize=5, edgewidth=0.05, edgecolor="gray"),
+                so.Dot(marker=marker, pointsize=8, edgewidth=0, edgecolor="gray"),
                 so.Dodge(),
             )
             .scale(

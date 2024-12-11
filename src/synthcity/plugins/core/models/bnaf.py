@@ -253,9 +253,13 @@ class MaskedWeight(torch.nn.Module):
 
         return (
             inputs.matmul(w) + self.bias,
-            torch.logsumexp(g.unsqueeze(-2) + grad.transpose(-2, -1).unsqueeze(-3), -1)
-            if grad is not None
-            else g,
+            (
+                torch.logsumexp(
+                    g.unsqueeze(-2) + grad.transpose(-2, -1).unsqueeze(-3), -1
+                )
+                if grad is not None
+                else g
+            ),
         )
 
     def __repr__(self) -> str:

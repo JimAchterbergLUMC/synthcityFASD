@@ -13,11 +13,14 @@ from scipy import stats
 from scipy.stats import entropy
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
+
 
 # synthcity absolute
 import synthcity.logger as log
 from synthcity.metrics import _utils
 from synthcity.plugins.core.dataloader import DataLoader
+from synthcity.plugins.core.models.tabular_encoder import frame_preprocessor
 from synthcity.utils.constants import DEVICE
 from synthcity.utils.serialization import load_from_file, save_to_file
 
@@ -470,20 +473,50 @@ class DomiasMIA(PrivacyEvaluator):
             A dictionary with the AUCROC and accuracy scores for the attack.
         """
 
-        mem_set = X_train.dataframe()
+        # preprocess data for correct density estimation
+        x = X_gt.dataframe()
+        x_tr = X_train.dataframe()
+        syn = synth_set.dataframe()
+        syn_val = synth_val_set.dataframe()
+
+        # get column wise encoders
+        encoders = []
+        for col in x:
+            if (col in X_gt.discrete_features) or (x[col].nunique() < 5):
+                enc = OneHotEncoder(sparse_output=False).fit(
+                    pd.concat([x[[col]], x_tr[[col]], syn[[col]], syn_val[[col]]])
+                )
+            else:
+                enc = MinMaxScaler(feature_range=(-1, 1))
+            encoders.append(enc)
+
+        # apply preprocessing
+        x = frame_preprocessor(x, encoders)
+        x_tr = frame_preprocessor(x_tr, encoders)
+        syn = frame_preprocessor(syn, encoders)
+        syn_val = frame_preprocessor(syn_val, encoders)
+
+        mem_set = x_tr.copy()
         non_mem_set, reference_set = (
-            X_gt.numpy()[:reference_size],
-            X_gt.numpy()[-reference_size:],
+            x.to_numpy()[:reference_size],
+            x.to_numpy()[-reference_size:],
         )
 
         all_real_data = np.concatenate((X_train.numpy(), X_gt.numpy()), axis=0)
 
         continuous = []
-        for i in np.arange(all_real_data.shape[1]):
-            if len(np.unique(all_real_data[:, i])) < 10:
+        # normalize using actual discrete feature names
+        for col in X_gt.columns:
+            if col in X_gt.discrete_features:
                 continuous.append(0)
             else:
                 continuous.append(1)
+
+        # for i in np.arange(all_real_data.shape[1]):
+        #     if len(np.unique(all_real_data[:, i])) < 10:
+        #         continuous.append(0)
+        #     else:
+        #         continuous.append(1)
 
         self.norm = _utils.normal_func_feat(all_real_data, continuous)
 
@@ -500,7 +533,7 @@ class DomiasMIA(PrivacyEvaluator):
         # eqn2: \prop P_G(x_i)/P_X(x_i)
         # p_R estimation
         p_G_evaluated, p_R_evaluated = self.evaluate_p_R(
-            synth_set, synth_val_set, reference_set, X_test, device
+            syn, syn_val, reference_set, X_test, device
         )
 
         p_rel = p_G_evaluated / (p_R_evaluated + 1e-10)
@@ -591,7 +624,9 @@ class DomiasMIABNAF(DomiasMIA):
         _, p_R_model = _utils.density_estimator_trainer(reference_set)
         p_G_evaluated = np.exp(
             _utils.compute_log_p_x(
-                p_G_model, torch.as_tensor(X_test).float().to(device)
+                p_G_model,
+                torch.as_tensor(X_test).float().to(device),
+                inference=True,
             )
             .cpu()
             .detach()
@@ -599,10 +634,13 @@ class DomiasMIABNAF(DomiasMIA):
         )
         p_R_evaluated = np.exp(
             _utils.compute_log_p_x(
-                p_R_model, torch.as_tensor(X_test).float().to(device)
+                p_R_model,
+                torch.as_tensor(X_test).float().to(device),
+                inference=True,
             )
             .cpu()
             .detach()
             .numpy()
         )
+
         return p_G_evaluated, p_R_evaluated

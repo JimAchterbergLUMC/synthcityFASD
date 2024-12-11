@@ -353,8 +353,17 @@ def load_model(
     return f
 
 
-def compute_log_p_x(model: nn.Module, x_mb: torch.Tensor) -> torch.Tensor:
-    y_mb, log_diag_j_mb = model(x_mb)
+def compute_log_p_x(
+    model: nn.Module, x_mb: torch.Tensor, inference: bool = False
+) -> torch.Tensor:
+    # disable gradient computation to preserve memory during inference with the test set
+    # this inference is not batched, so NOT disabling gradients causes massive overhead
+    if inference:
+        with torch.no_grad():
+            y_mb, log_diag_j_mb = model(x_mb)
+    else:
+        y_mb, log_diag_j_mb = model(x_mb)
+
     log_p_y_mb = (
         torch.distributions.Normal(torch.zeros_like(y_mb), torch.ones_like(y_mb))
         .log_prob(y_mb)
