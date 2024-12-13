@@ -4,6 +4,8 @@ from abc import abstractmethod
 from collections import Counter
 from typing import Any, Dict, Tuple, Union
 
+import traceback
+
 # third party
 import numpy as np
 import pandas as pd
@@ -13,16 +15,22 @@ from scipy import stats
 from scipy.stats import entropy
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 
+# from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
+
+# from mixedvines.mixedvine import MixedVine
 
 # synthcity absolute
 import synthcity.logger as log
 from synthcity.metrics import _utils
 from synthcity.plugins.core.dataloader import DataLoader
-from synthcity.plugins.core.models.tabular_encoder import frame_preprocessor
+from synthcity.plugins.core.models.tabular_encoder import (
+    TabularEncoder,
+    frame_preprocessor,
+)
 from synthcity.utils.constants import DEVICE
 from synthcity.utils.serialization import load_from_file, save_to_file
+from synthcity.plugins.core.models.vae import VAE
 
 # synthcity relative
 from .core import MetricEvaluator
@@ -473,33 +481,10 @@ class DomiasMIA(PrivacyEvaluator):
             A dictionary with the AUCROC and accuracy scores for the attack.
         """
 
-        # preprocess data for correct density estimation
-        x = X_gt.dataframe()
-        x_tr = X_train.dataframe()
-        syn = synth_set.dataframe()
-        syn_val = synth_val_set.dataframe()
-
-        # get column wise encoders
-        encoders = []
-        for col in x:
-            if (col in X_gt.discrete_features) or (x[col].nunique() < 5):
-                enc = OneHotEncoder(sparse_output=False).fit(
-                    pd.concat([x[[col]], x_tr[[col]], syn[[col]], syn_val[[col]]])
-                )
-            else:
-                enc = MinMaxScaler(feature_range=(-1, 1))
-            encoders.append(enc)
-
-        # apply preprocessing
-        x = frame_preprocessor(x, encoders)
-        x_tr = frame_preprocessor(x_tr, encoders)
-        syn = frame_preprocessor(syn, encoders)
-        syn_val = frame_preprocessor(syn_val, encoders)
-
-        mem_set = x_tr.copy()
+        mem_set = X_train.dataframe()
         non_mem_set, reference_set = (
-            x.to_numpy()[:reference_size],
-            x.to_numpy()[-reference_size:],
+            X_gt.numpy()[:reference_size],
+            X_gt.numpy()[-reference_size:],
         )
 
         all_real_data = np.concatenate((X_train.numpy(), X_gt.numpy()), axis=0)
@@ -533,7 +518,7 @@ class DomiasMIA(PrivacyEvaluator):
         # eqn2: \prop P_G(x_i)/P_X(x_i)
         # p_R estimation
         p_G_evaluated, p_R_evaluated = self.evaluate_p_R(
-            syn, syn_val, reference_set, X_test, device
+            synth_set, synth_val_set, reference_set, X_test, device
         )
 
         p_rel = p_G_evaluated / (p_R_evaluated + 1e-10)
@@ -593,6 +578,39 @@ and using `gaussian_kde` with the transformed data. Else consider using `bnaf` a
                 """
             )
 
+        # continuous = []
+        # for i in np.arange(synth_set.shape[1]):
+        #     if len(np.unique(synth_set.values[:, i])) < 20:
+        #         continuous.append(0)
+        #     else:
+        #         continuous.append(1)
+
+        #     def norm(data: np.ndarray, is_continuous: list):
+        #         data_normalized = data.copy()
+        #         for i, is_cont in enumerate(is_continuous):
+        #             if is_cont:  # If the column is continuous
+        #                 col = data[:, i]
+        #                 mean = np.mean(col)
+        #                 std = np.std(col)
+        #                 data_normalized[:, i] = (col - mean) / (
+        #                     std + 1e-8
+        #                 )  # Avoid division by zero
+        #         return data_normalized
+
+        #     # there are no samples in _logcdf
+
+        #     syn = norm(synth_set.values, continuous)
+        #     X_test = norm(X_test, continuous)
+
+        #     copula_gen = MixedVine.fit(syn, continuous)
+        #     copula_data = MixedVine.fit(reference_set, continuous)
+
+        #     p_G_evaluated = copula_gen.logpdf(X_test)
+        #     p_R_evaluated = copula_data.logpdf(X_test)
+
+        # except Exception as e:
+        #     traceback.print_exc()
+
         density_gen = stats.gaussian_kde(synth_set.values.transpose(1, 0))
         density_data = stats.gaussian_kde(reference_set.transpose(1, 0))
         p_G_evaluated = density_gen(X_test.transpose(1, 0))
@@ -616,31 +634,162 @@ class DomiasMIABNAF(DomiasMIA):
         X_test: np.ndarray,
         device: Any,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        _, p_G_model = _utils.density_estimator_trainer(
-            synth_set.values,
-            synth_val_set.values[: int(0.5 * synth_val_set.shape[0])],
-            synth_val_set.values[int(0.5 * synth_val_set.shape[0]) :],
-        )
-        _, p_R_model = _utils.density_estimator_trainer(reference_set)
-        p_G_evaluated = np.exp(
-            _utils.compute_log_p_x(
-                p_G_model,
-                torch.as_tensor(X_test).float().to(device),
-                inference=True,
+
+        # get a tabular encoder on the data
+        # technically numerical scaling should be done separately for each dataset
+        # but in SD, min and max values are typically the same as in RD so scaling will be similar
+
+        try:
+            encoder = TabularEncoder(
+                continuous_encoder="minmax",
+                categorical_encoder="onehot",
+                cont_encoder_params={"feature_range": (-1, 1)},
+                cat_encoder_params={"sparse_output": False},
+                categorical_limit=10,
             )
-            .cpu()
-            .detach()
-            .numpy()
-        )
-        p_R_evaluated = np.exp(
-            _utils.compute_log_p_x(
-                p_R_model,
-                torch.as_tensor(X_test).float().to(device),
-                inference=True,
+            encoder.fit(
+                pd.DataFrame(
+                    np.concatenate(
+                        (
+                            synth_set.numpy(),
+                            synth_val_set.numpy(),
+                            reference_set,
+                            X_test,
+                        )
+                    ),
+                    columns=synth_set.columns,
+                ),
+                discrete_columns=synth_set.discrete_features,
             )
-            .cpu()
-            .detach()
-            .numpy()
-        )
+            # fit encoder on all data together to ensure proper one hot encoding
+            syn = encoder.transform(synth_set.dataframe())
+            ref = encoder.transform(
+                pd.DataFrame(reference_set, columns=synth_set.columns)
+            )
+            x_te = encoder.transform(pd.DataFrame(X_test, columns=synth_set.columns))
+
+            # estimate a VAE on SD
+            p_G_model = VAE(
+                n_features=encoder.n_features(),
+                n_units_embedding=128,
+                n_units_conditional=0,
+                batch_size=200 if syn.shape[0] > 1000 else 32,
+                n_iter=1000,
+                random_state=0,
+                lr=1e-3,
+                weight_decay=1e-5,
+                # Decoder
+                decoder_n_layers_hidden=2,
+                decoder_n_units_hidden=250,
+                decoder_nonlin="leaky_relu",
+                decoder_nonlin_out=encoder.activation_layout(
+                    discrete_activation="softmax",
+                    continuous_activation="tanh",
+                ),
+                decoder_batch_norm=False,
+                decoder_dropout=0,
+                decoder_residual=True,
+                # Encoder
+                encoder_n_layers_hidden=2,
+                encoder_n_units_hidden=250,
+                encoder_nonlin="leaky_relu",
+                encoder_batch_norm=False,
+                encoder_dropout=0.1,
+                # Loss parameters
+                loss_strategy="standard",  # standard, robust_divergence
+                loss_factor=1,
+                robust_divergence_beta=2,  # used for loss_strategy = robust_divergence
+                dataloader_sampler=None,
+                device=DEVICE,
+                extra_loss_cbks=[],
+                clipping_value=1,
+                # early stopping
+                n_iter_min=100,
+                n_iter_print=10,
+                patience=20,
+            ).fit(syn.to_numpy())
+            # we are not using the extra generated reference SD as in original DOMIAS.
+            # rather, we just split the SD ourselves. this should give similar results.
+            p_R_model = VAE(
+                n_features=encoder.n_features(),
+                n_units_embedding=128,
+                n_units_conditional=0,
+                batch_size=200 if ref.shape[0] > 1000 else 32,
+                n_iter=1000,
+                random_state=0,
+                lr=1e-3,
+                weight_decay=1e-5,
+                # Decoder
+                decoder_n_layers_hidden=2,
+                decoder_n_units_hidden=250,
+                decoder_nonlin="leaky_relu",
+                decoder_nonlin_out=encoder.activation_layout(
+                    discrete_activation="softmax",
+                    continuous_activation="tanh",
+                ),
+                decoder_batch_norm=False,
+                decoder_dropout=0,
+                decoder_residual=True,
+                # Encoder
+                encoder_n_layers_hidden=2,
+                encoder_n_units_hidden=250,
+                encoder_nonlin="leaky_relu",
+                encoder_batch_norm=False,
+                encoder_dropout=0.1,
+                # Loss parameters
+                loss_strategy="standard",  # standard, robust_divergence
+                loss_factor=1,
+                robust_divergence_beta=2,  # used for loss_strategy = robust_divergence
+                dataloader_sampler=None,
+                device=DEVICE,
+                extra_loss_cbks=[],
+                clipping_value=1,
+                # early stopping
+                n_iter_min=100,
+                n_iter_print=10,
+                patience=20,
+            ).fit(ref.to_numpy())
+
+            # get reconstruction error on test data
+            p_G_evaluated = p_G_model.reconstruction_loss(
+                torch.as_tensor(x_te.to_numpy()).float().to(device)
+            )
+
+            p_R_evaluated = p_R_model.reconstruction_loss(
+                torch.as_tensor(x_te.to_numpy()).float().to(device)
+            )
+
+            # ELBO loss is in log space so we should exponentiate if we use division later on
+            p_G_evaluated, p_R_evaluated = np.exp(p_G_evaluated), np.exp(p_R_evaluated)
+
+        except Exception as e:
+            traceback.print_exc()
+
+        # _, p_G_model = _utils.density_estimator_trainer(
+        #     synth_set.values,
+        #     synth_val_set.values[: int(0.5 * synth_val_set.shape[0])],
+        #     synth_val_set.values[int(0.5 * synth_val_set.shape[0]) :],
+        # )
+        # _, p_R_model = _utils.density_estimator_trainer(reference_set)
+        # p_G_evaluated = np.exp(
+        #     _utils.compute_log_p_x(
+        #         p_G_model,
+        #         torch.as_tensor(X_test).float().to(device),
+        #         inference=True,
+        #     )
+        #     .cpu()
+        #     .detach()
+        #     .numpy()
+        # )
+        # p_R_evaluated = np.exp(
+        #     _utils.compute_log_p_x(
+        #         p_R_model,
+        #         torch.as_tensor(X_test).float().to(device),
+        #         inference=True,
+        #     )
+        #     .cpu()
+        #     .detach()
+        #     .numpy()
+        # )
 
         return p_G_evaluated, p_R_evaluated

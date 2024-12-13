@@ -597,3 +597,47 @@ class VAE(nn.Module):
         KLD_loss = (-0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp())) / real.shape[0]
 
         return reconstruction_loss * self.loss_factor + KLD_loss
+
+    def reconstruction_loss(self, X: Tensor):
+        # pass data through model, without gradients
+        with torch.no_grad():
+            mu, logvar = self.encoder(X, None)
+            embedding = self._reparameterize(mu, logvar)
+            reconstructed = self.decoder(embedding, None)
+
+            # Initialize per-sample loss
+            reconstruction_loss = torch.zeros(X.size(0), device=X.device)
+
+            step = 0
+            for activation, length in self.decoder_nonlin_out:
+                step_end = step + length
+                if activation == "softmax":
+                    # Compute loss per sample for discrete features
+                    discr_loss = nn.NLLLoss(reduction="none")(
+                        torch.log(reconstructed[:, step:step_end] + 1e-8),
+                        torch.argmax(X[:, step:step_end], dim=-1),
+                    )
+                    # Sum over the feature dimension
+                    reconstruction_loss += discr_loss.sum(dim=-1)
+                else:
+                    # Compute loss per sample for continuous features
+                    diff = reconstructed[:, step:step_end] - X[:, step:step_end]
+                    cont_loss = (50 * diff**2).sum(
+                        dim=-1
+                    )  # Sum over the feature dimension
+                    reconstruction_loss += cont_loss
+
+                step = step_end
+
+            if step != reconstructed.size(1):
+                raise RuntimeError(
+                    f"Invalid reconstructed features. Expected {step}, got {reconstructed.shape}"
+                )
+
+            KLD_loss = -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1)
+            # during training we use a loss factor, but not for determining true ELBO loss
+            # loss_factor = self.loss_factor
+            loss_factor = 1
+            elbo = -(reconstruction_loss * loss_factor + KLD_loss)
+
+        return elbo.cpu().detach().numpy()  # Return per-sample losses

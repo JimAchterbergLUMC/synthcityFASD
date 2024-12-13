@@ -929,7 +929,7 @@ class PerformanceEvaluatorMLP(PerformanceEvaluator):
                 "random_state": self._random_state,
                 "task_type": self._task_type,
                 "n_iter_min": 1,
-                "batch_size": 64,
+                "batch_size": 200 if X_gt.dataframe().shape[0] > 1000 else 32,
             }
 
             return self._evaluate_standard_performance(

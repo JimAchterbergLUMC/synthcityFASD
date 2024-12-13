@@ -180,6 +180,27 @@ def stripplot(df, metrics):
         )
     )
 
+    # count the amount of points in a group (model, category, and score_rank is the same) as k
+    # score_rank i = score_rank i + (-0.25 + (i/k)*0.5 )
+    def adjust_score_rank(group):
+        k = len(group)  # Count of points in the group
+        if k > 1:
+            if k > 3:
+                group["score_rank"] = group["score_rank"] + (
+                    -0.2 + (np.arange(1, k + 1) / k) * 0.4
+                )
+            else:
+                group["score_rank"] = group["score_rank"] + (
+                    -0.1 + (np.arange(1, k + 1) / k) * 0.2
+                )
+        return group
+
+    data = (
+        data.groupby(["model", "dataset", "category", "score_rank"])
+        .apply(adjust_score_rank)
+        .reset_index(drop=True)
+    )
+
     p = (
         so.Plot(
             data,
@@ -187,15 +208,16 @@ def stripplot(df, metrics):
             y="score_rank",
             color="category",
             marker="dataset",
+            text="name",
         )
         .add(
             so.Dot(pointsize=5, edgewidth=0.05, edgecolor="gray"),
-            so.Dodge(),
-            so.Jitter(
-                x=0,
-                y=0.3,
-                seed=0,
-            ),
+            so.Dodge(empty="keep", gap=0.05),
+            # so.Jitter(
+            #     x=0,
+            #     y=0.3,
+            #     seed=0,
+            # ),
         )
         .scale(
             y=so.Continuous().tick(every=1).label(like=fun),
@@ -206,7 +228,7 @@ def stripplot(df, metrics):
         .label(x="model", y="score_rank", marker="Dataset")
     )
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 10))
 
     # plot results
     # l.on(ax).plot()
@@ -332,7 +354,7 @@ def aia_deepdive_plot(df, ds):
     data["type"] = data["type"].apply(map_to_key, dict=config)
 
     # build separate plots for numerical and discrete features
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))  # Adjust size as needed
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 
     for ax, type_ in zip(axs, ["discrete", "numerical"]):
         d = data[data["type"] == type_]
@@ -470,7 +492,7 @@ if __name__ == "__main__":
     results = results[["name", "mean", "direction", "stddev", "model", "ds"]]
     df = results
 
-    # format_table(df, metrics=metrics)
-    # stripplot(df, metrics)
+    format_table(df, metrics=metrics)
+    stripplot(df, metrics)
     # mann_whitney_tests(df, metrics)
-    aia_deepdive_plot(df, ds="adult")
+    # aia_deepdive_plot(df, ds="adult")

@@ -90,47 +90,56 @@ class AttackEvaluator(MetricEvaluator):
                 test=test_keys_data.dataframe(),
                 discrete_features=discrete,
             )
+            try:
 
-            # setup target and model for classification / regression
-            if task_type == "classification":
+                # setup target and model for classification / regression
+                if task_type == "classification":
 
-                # if some labels occur in test data which do not appear in train data, remove those datapoints
-                test_keys_data = test_keys_data[test_target.isin(target.unique())]
-                test_target = test_target[test_target.isin(target.unique())]
+                    # if some labels occur in test data which do not appear in train data, remove those datapoints
+                    test_keys_data = test_keys_data[test_target.isin(target.unique())]
+                    test_target = test_target[test_target.isin(target.unique())]
 
-                encoder = LabelEncoder()
-                target = encoder.fit_transform(target)
-                test_target = encoder.transform(test_target)
-                if "n_units_out" in classifier_args:
-                    # TBD: fix MLP
-                    classifier_args["n_units_out"] = len(np.unique(target))
-                    classifier_args["n_units_in"] = keys_data.shape[1]
-                model = classifier_template(**classifier_args)
-            else:
-                encoder = MinMaxScaler(feature_range=(-1, 1))
-                target = pd.Series(
-                    encoder.fit_transform(target.to_frame()).flatten(),
-                    index=target.index,
-                )
-                test_target = pd.Series(
-                    encoder.fit_transform(test_target.to_frame()).flatten(),
-                    index=test_target.index,
-                )
-                model = regressor_template(**regressor_args)
-            model.fit(keys_data.values, np.asarray(target))
-            # get predictions and scores
-            if task_type == "classification":
-                preds = model.predict_proba(test_keys_data.values)
-                output_, _ = evaluate_auc(
-                    np.asarray(test_target),
-                    np.asarray(preds),
-                    classes=sorted(set(np.asarray(target))),
-                )
-                output_discrete.append(output_)
-            else:
-                preds = model.predict(test_keys_data.values)
-                output_ = r2_score(np.asarray(test_target), np.asarray(preds))
-                output_numerical.append(output_)
+                    encoder = LabelEncoder()
+                    target = encoder.fit_transform(target)
+                    test_target = encoder.transform(test_target)
+                    if "n_units_out" in classifier_args:
+                        # TBD: fix MLP
+                        classifier_args["n_units_out"] = len(np.unique(target))
+                        classifier_args["n_units_in"] = keys_data.shape[1]
+                    model = classifier_template(**classifier_args)
+                else:
+                    encoder = MinMaxScaler(feature_range=(-1, 1))
+                    target = pd.Series(
+                        encoder.fit_transform(target.to_frame()).flatten(),
+                        index=target.index,
+                    )
+                    test_target = pd.Series(
+                        encoder.fit_transform(test_target.to_frame()).flatten(),
+                        index=test_target.index,
+                    )
+                    model = regressor_template(**regressor_args)
+
+                model.fit(keys_data.values, np.asarray(target))
+                # get predictions and scores
+                if task_type == "classification":
+                    preds = model.predict_proba(test_keys_data.values)
+                    output_, _ = evaluate_auc(
+                        np.asarray(test_target),
+                        np.asarray(preds),
+                        classes=sorted(set(np.asarray(target))),
+                    )
+                    output_discrete.append(output_)
+                else:
+                    preds = model.predict(test_keys_data.values)
+                    output_ = r2_score(np.asarray(test_target), np.asarray(preds))
+                    output_numerical.append(output_)
+            except:
+                # handle exceptions, mainly when no multiple target labels for highly imbalanced features
+                # in that case just make random predictions corresponding to AUC of 0.5
+                if task_type == "classification":
+                    output_discrete.append(0.5)
+                else:
+                    output_numerical.append(0)
 
         output = output_discrete + output_numerical
         if len(output) == 0:
