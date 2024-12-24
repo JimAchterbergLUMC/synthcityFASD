@@ -379,7 +379,7 @@ def aia_deepdive_plot(df, ds):
         )
         b.on(ax).plot()
 
-        d["name"] = d["name"].str[0] + "." + d["name"].str[-1]
+        d["name"] = d["name"].str[0] + d["name"].str[-1]
 
         marker = "o" if type_ == "discrete" else "v"
         p = (
