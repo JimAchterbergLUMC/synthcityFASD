@@ -52,17 +52,15 @@ def format_table(df, metrics, save_path="UIAYN_experiments/results_formatted"):
     priv_table = []
     for metric, table in dfs.items():
 
-        # cannot attach AIA metrics since these rows do not exist for each column in the table
-        # they are dataset specific
-        if "leakage" in metric:
-            metrics.update(
-                {
-                    metric: {
-                        "name": "AIA-" + metric.split(".")[-1],
-                        "category": "privacy",
-                    }
-                }
-            )
+        # if "leakage" in metric:
+        #     metrics.update(
+        #         {
+        #             metric: {
+        #                 "name": "AIA-" + metric.split(".")[-1],
+        #                 "category": "privacy",
+        #             }
+        #         }
+        #     )
 
         # only use the metrics which are contained in the dictionary
         z = df.groupby("name")["direction"].first()  # .reset_index(drop=False)
@@ -101,17 +99,17 @@ def stripplot(df, metrics):
     data = df
 
     # attach dataset specific AIA metric
-    for _, row in data[
-        data["name"].str.contains("leakage", case=False, na=False)
-    ].iterrows():
-        metrics.update(
-            {
-                row["name"]: {
-                    "name": "AIA-" + row["name"].split(".")[-1],
-                    "category": "privacy",
-                }
-            }
-        )
+    # for _, row in data[
+    #     data["name"].str.contains("leakage", case=False, na=False)
+    # ].iterrows():
+    #     metrics.update(
+    #         {
+    #             row["name"]: {
+    #                 "name": "AIA-" + row["name"].split(".")[-1],
+    #                 "category": "privacy",
+    #             }
+    #         }
+    #     )
 
     # remove all non used metrics
     data = data[data["name"].apply(lambda x: x in metrics.keys())]
@@ -368,12 +366,20 @@ def aia_deepdive_plot(df, ds):
                 y="mean",
                 # color="category",
             )
-            .add(so.Bar(alpha=0.3, edgewidth=0), so.Dodge(), legend=False)
+            .add(
+                so.Bar(
+                    alpha=0.3, edgewidth=0, baseline=0.5 if type_ == "discrete" else 0
+                ),
+                so.Dodge(),
+                legend=False,
+            )
             .scale(
                 # color=so.Nominal(palette),
             )
         )
         b.on(ax).plot()
+
+        d["name"] = d["name"].str[0] + "." + d["name"].str[-1]
 
         marker = "o" if type_ == "discrete" else "v"
         p = (
@@ -381,42 +387,53 @@ def aia_deepdive_plot(df, ds):
                 d,
                 x="model",
                 y="mean",
+                text="name",
                 color="name",
             )
             .add(
                 so.Dot(marker=marker, pointsize=8, edgewidth=0, edgecolor="gray"),
                 so.Dodge(),
+                legend=False,
+            )
+            .add(
+                so.Text(valign="bottom", halign="center"),
+                so.Dodge(),
+                legend=False,
             )
             .scale(
                 # y=so.Continuous().tick(every=1),
                 color=so.Nominal(sns.color_palette("bright")),
             )
-            .label(
-                x="model",
-                y="mean",
-                color=(
-                    "Discrete Features" if type_ == "discrete" else "Numerical Features"
-                ),
-            )
+            # .label(
+            #     x="model",
+            #     y="mean",
+            #     color=(
+            #         "Discrete Features" if type_ == "discrete" else "Numerical Features"
+            #     ),
+            # )
         )
+
         p.on(ax).plot()
 
         ax.set_xlabel("")
         ax.set_ylabel(
-            "AUROC" if type_ == "discrete" else r"$R^2$", rotation="horizontal"
+            "AUROC" if type_ == "discrete" else r"Log $R^2$",
         )
         ax.set_title(
             "Attribute Inference: Discrete Features"
             if type_ == "discrete"
             else "Attribute Inference: Numerical Features"
         )
+        if type_ == "numerical":
+            ax.set_yscale("symlog")
 
     # place the legends
-    fig.legends[0].set_bbox_to_anchor((0.9, 0.75))
-    fig.legends[1].set_bbox_to_anchor((0.9, 0.25))
+    # fig.legends[0].set_bbox_to_anchor((0.9, 0.75))
+    # fig.legends[1].set_bbox_to_anchor((0.9, 0.25))
     # Save the figure
     output_dir = "UIAYN_experiments/results_formatted"
     os.makedirs(output_dir, exist_ok=True)
+    plt.tight_layout()
     plt.savefig(
         f"{output_dir}/aia_deepdive.pdf",
         bbox_inches="tight",
@@ -469,6 +486,14 @@ if __name__ == "__main__":
             "name": "Identifiability",
             "category": "privacy",
         },
+        "privacy.DomiasMIA_BNAF.aucroc": {
+            "name": "Membership Inference",
+            "category": "privacy",
+        },
+        "attack.data_leakage_xgb.mean": {
+            "name": "Attribute Inference",
+            "category": "privacy",
+        },
         "stats.alpha_precision.authenticity_OC": {
             "name": "Authenticity",
             "category": "privacy",
@@ -495,4 +520,4 @@ if __name__ == "__main__":
     format_table(df, metrics=metrics)
     stripplot(df, metrics)
     # mann_whitney_tests(df, metrics)
-    # aia_deepdive_plot(df, ds="adult")
+    aia_deepdive_plot(df, ds="adult")

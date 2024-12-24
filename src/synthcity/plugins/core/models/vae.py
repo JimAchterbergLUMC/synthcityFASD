@@ -622,9 +622,7 @@ class VAE(nn.Module):
                 else:
                     # Compute loss per sample for continuous features
                     diff = reconstructed[:, step:step_end] - X[:, step:step_end]
-                    cont_loss = (50 * diff**2).sum(
-                        dim=-1
-                    )  # Sum over the feature dimension
+                    cont_loss = (diff**2).sum(dim=-1)  # Sum over the feature dimension
                     reconstruction_loss += cont_loss
 
                 step = step_end
@@ -635,7 +633,7 @@ class VAE(nn.Module):
                 )
 
             KLD_loss = -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1)
-            # during training we use a loss factor, but not for determining true ELBO loss
+            # during training we might use a loss factor, but not for determining true ELBO loss
             # loss_factor = self.loss_factor
             loss_factor = 1
             elbo = -(reconstruction_loss * loss_factor + KLD_loss)

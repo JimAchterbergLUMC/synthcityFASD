@@ -521,7 +521,10 @@ class DomiasMIA(PrivacyEvaluator):
             synth_set, synth_val_set, reference_set, X_test, device
         )
 
-        p_rel = p_G_evaluated / (p_R_evaluated + 1e-10)
+        # p_rel = p_G_evaluated / (p_R_evaluated + 1e-10)
+        # elbo is in log space (which is fine for DOMIAS)
+        p_rel = p_G_evaluated - p_R_evaluated
+        # p_rel = np.exp(p_rel)
 
         acc, auc = _utils.compute_metrics_baseline(p_rel, Y_test)
         return {
@@ -674,7 +677,7 @@ class DomiasMIABNAF(DomiasMIA):
                 n_units_embedding=128,
                 n_units_conditional=0,
                 batch_size=200 if syn.shape[0] > 1000 else 32,
-                n_iter=1000,
+                n_iter=100,
                 random_state=0,
                 lr=1e-3,
                 weight_decay=1e-5,
@@ -715,7 +718,7 @@ class DomiasMIABNAF(DomiasMIA):
                 n_units_embedding=128,
                 n_units_conditional=0,
                 batch_size=200 if ref.shape[0] > 1000 else 32,
-                n_iter=1000,
+                n_iter=100,
                 random_state=0,
                 lr=1e-3,
                 weight_decay=1e-5,
@@ -750,7 +753,7 @@ class DomiasMIABNAF(DomiasMIA):
                 patience=20,
             ).fit(ref.to_numpy())
 
-            # get reconstruction error on test data
+            # get reconstruction error (elbo loss) on test data
             p_G_evaluated = p_G_model.reconstruction_loss(
                 torch.as_tensor(x_te.to_numpy()).float().to(device)
             )
@@ -758,9 +761,6 @@ class DomiasMIABNAF(DomiasMIA):
             p_R_evaluated = p_R_model.reconstruction_loss(
                 torch.as_tensor(x_te.to_numpy()).float().to(device)
             )
-
-            # ELBO loss is in log space so we should exponentiate if we use division later on
-            p_G_evaluated, p_R_evaluated = np.exp(p_G_evaluated), np.exp(p_R_evaluated)
 
         except Exception as e:
             traceback.print_exc()

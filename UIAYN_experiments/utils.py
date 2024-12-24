@@ -64,6 +64,8 @@ def plot_df(df: pd.DataFrame):
 
 def clear_dir(directory):
     # remove all files from specified directory
+    if not os.path.exists(directory):
+        return None
     for item in os.listdir(directory):
         filepath = os.path.join(directory, item)
         if os.path.isfile(filepath):

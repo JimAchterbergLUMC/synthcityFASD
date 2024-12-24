@@ -32,7 +32,7 @@ def tune(X_r, models, tune_params, path):
             "generator_n_layers_hidden",
             "generator_n_units_hidden",
         ],
-        "pategan": [
+        "dpgan": [
             "discriminator_n_layers_hidden",
             "discriminator_n_units_hidden",
             "generator_n_layers_hidden",
@@ -81,10 +81,7 @@ def tune(X_r, models, tune_params, path):
 
             if len(X_r) < 1000:
                 params["batch_size"] = 32
-                if plugin in ["tvae", "fasd", "ctgan", "adsgan"]:
-                    params["n_iter_min"] = 10
-                if plugin in ["pategan"]:
-                    params["n_teachers"] = 5
+                params["n_iter_min"] = 10
 
             try:
                 report = Benchmarks.evaluate(
@@ -165,10 +162,7 @@ def benchmark(ds, models, tune_params, metrics, repeats, split=1):
     for name, plugin, params in evaluate:
         if len(X_r) < 1000:
             params["batch_size"] = 32
-            if plugin in ["tvae", "fasd", "ctgan", "adsgan"]:
-                params["n_iter_min"] = 10
-            if plugin in ["pategan"]:
-                params["n_teachers"] = 5
+            params["n_iter_min"] = 10
 
     # perform benchmarking
     score = Benchmarks.evaluate(
@@ -189,3 +183,5 @@ def benchmark(ds, models, tune_params, metrics, repeats, split=1):
         os.makedirs(result_path)
     for name, plugin, params in evaluate:
         score[name].to_csv(result_path + f"/{name}.csv")
+
+    clear_dir("workspace")
