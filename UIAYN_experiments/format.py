@@ -11,6 +11,34 @@ import json
 
 
 def format_table(df, metrics, save_path="UIAYN_experiments/results_formatted"):
+    for _, row in df[(df["name"].str.startswith("attack.data_leakage"))].iterrows():
+        if row["name"].split(".")[-1] not in ["mean", "numerical", "discrete"]:
+            metrics.update(
+                {
+                    row["name"]: {
+                        "name": row["name"],
+                        "category": "privacy",
+                    }
+                }
+            )
+
+    # get aia data
+    aia = df[df["name"].str.startswith("attack.data_leakage")]
+    # rank the models for each feature/dataset
+    aia["mean"] = aia.groupby(["ds", "name"]).rank()["mean"]
+    # get standard deviation of the ranks over the attributes
+    aia["stddev"] = aia.groupby(["ds", "model"])["mean"].transform("std")
+    # get average of the ranks over the attributes
+    aia["mean"] = aia.groupby(["ds", "model"])["mean"].transform("mean")
+    # collapse to single row per model/dataset
+    aia = aia.groupby(["ds", "model"], as_index=False).first()
+    aia["name"] = "AIA"
+    metrics.update({"AIA": {"name": "AIA rank", "category": "privacy"}})
+
+    # replace aia scores with average rankings over features
+    df = df[~df["name"].str.startswith("attack.data_leakage")]
+    df = pd.concat([df, aia], axis=0, ignore_index=True)
+
     # save_path = save_path + f"/{ds}"
     # Group the DataFrame by 'name'
     grouped = df.groupby("name")
@@ -50,17 +78,9 @@ def format_table(df, metrics, save_path="UIAYN_experiments/results_formatted"):
     fid_table = []
     ut_table = []
     priv_table = []
+    print(metrics)
     for metric, table in dfs.items():
-
-        # if "leakage" in metric:
-        #     metrics.update(
-        #         {
-        #             metric: {
-        #                 "name": "AIA-" + metric.split(".")[-1],
-        #                 "category": "privacy",
-        #             }
-        #         }
-        #     )
+        print(metric)
 
         # only use the metrics which are contained in the dictionary
         z = df.groupby("name")["direction"].first()  # .reset_index(drop=False)
@@ -98,18 +118,19 @@ def stripplot(df, metrics):
     # select data for current dataset
     data = df
 
-    # attach dataset specific AIA metric
-    # for _, row in data[
-    #     data["name"].str.contains("leakage", case=False, na=False)
-    # ].iterrows():
-    #     metrics.update(
-    #         {
-    #             row["name"]: {
-    #                 "name": "AIA-" + row["name"].split(".")[-1],
-    #                 "category": "privacy",
-    #             }
-    #         }
-    #     )
+    # attach dataset specific AIA metrics
+    for _, row in data[
+        (data["name"].str.contains("leakage", case=False, na=False))
+    ].iterrows():
+        if row["name"].split(".")[-1] not in ["mean", "numerical", "discrete"]:
+            metrics.update(
+                {
+                    row["name"]: {
+                        "name": "AIA-" + row["name"].split(".")[-1],
+                        "category": "privacy",
+                    }
+                }
+            )
 
     # remove all non used metrics
     data = data[data["name"].apply(lambda x: x in metrics.keys())]
@@ -122,7 +143,22 @@ def stripplot(df, metrics):
 
     data = data[data["name"] != "Feature Importance"]
 
+    # get aia data
+    aia = data[data["name"].str.startswith("AIA-")]
+    # rank the models for each feature/dataset
+    aia["mean"] = aia.groupby(["ds", "name"]).rank()["mean"]
+    # get average rank over all attributes for each model/dataset
+    aia["mean"] = aia.groupby(["ds", "model"])["mean"].transform("mean")
+    # collapse to single row per model/dataset
+    aia = aia.groupby(["ds", "model"], as_index=False).first()
+    aia["name"] = "AIA"
+
+    # replace aia scores with average rankings over features
+    data = data[~data["name"].str.startswith("AIA-")]
+    data = pd.concat([data, aia], axis=0, ignore_index=True)
+
     # for each metric in each dataset rank the mean score
+    # dit gaat fout voor aia
     data["score_rank"] = data.groupby(["ds", "name"]).rank()["mean"]
     # for direction==maximize invert the ranking so rank of 1 is the best
     data["score_rank"] = np.where(
@@ -130,18 +166,19 @@ def stripplot(df, metrics):
         data.groupby(["ds", "name"])["score_rank"].transform(lambda x: x.max() - x + 1),
         data["score_rank"],
     )
+
     # plot
     palette = {
         "fidelity": "gray",
-        "utility": "green",
-        "privacy": "red",
+        "utility": "royalblue",
+        "privacy": "darkorange",
     }
     data = data.rename({"ds": "dataset"}, axis=1)
 
     data["model"] = data["model"].map(
         {
             "fasd": "FASD",
-            "pategan": "PATE-GAN",
+            "dpgane1": r"DP-GAN $\epsilon=1$",
             "adsgan": "AdsGAN",
             "tvae": "TVAE",
             "ctgan": "CTGAN",
@@ -209,7 +246,7 @@ def stripplot(df, metrics):
             text="name",
         )
         .add(
-            so.Dot(pointsize=5, edgewidth=0.05, edgecolor="gray"),
+            so.Dot(pointsize=5, edgewidth=0, edgecolor="gray"),
             so.Dodge(empty="keep", gap=0.05),
             # so.Jitter(
             #     x=0,
@@ -226,7 +263,7 @@ def stripplot(df, metrics):
         .label(x="model", y="score_rank", marker="Dataset")
     )
 
-    fig, ax = plt.subplots(figsize=(6, 10))
+    fig, ax = plt.subplots(figsize=(12, 12))
 
     # plot results
     # l.on(ax).plot()
@@ -253,7 +290,8 @@ def stripplot(df, metrics):
         ha="center",  # Horizontal alignment
         color="red",  # Color of the text
     )
-
+    # fig.legends[0].set_bbox_to_anchor((0.5, 0))
+    plt.tight_layout()
     p.save(
         "UIAYN_experiments/results_formatted/rank_fig.pdf",
         bbox_inches="tight",
@@ -262,23 +300,35 @@ def stripplot(df, metrics):
 
 
 def mann_whitney_tests(df, metrics):
+    for _, row in df[(df["name"].str.startswith("attack.data_leakage"))].iterrows():
+        if row["name"].split(".")[-1] not in ["mean", "numerical", "discrete"]:
+            metrics.update(
+                {
+                    row["name"]: {
+                        "name": row["name"],
+                        "category": "privacy",
+                    }
+                }
+            )
+
+    # get aia data
+    aia = df[df["name"].str.startswith("attack.data_leakage")]
+    # rank the models for each feature/dataset
+    aia["mean"] = aia.groupby(["ds", "name"]).rank()["mean"]
+    # get average of the ranks over the attributes
+    aia["mean"] = aia.groupby(["ds", "model"])["mean"].transform("mean")
+    # collapse to single row per model/dataset
+    aia = aia.groupby(["ds", "model"], as_index=False).first()
+    aia["name"] = "AIA"
+    metrics.update({"AIA": {"name": "AIA rank", "category": "privacy"}})
+    # replace aia scores with average rankings over features
+    df = df[~df["name"].str.startswith("attack.data_leakage")]
+    df = pd.concat([df, aia], axis=0, ignore_index=True)
+
     data = df
 
-    # attach dataset specific AIA metric
-    for _, row in data[
-        data["name"].str.contains("leakage", case=False, na=False)
-    ].iterrows():
-        metrics.update(
-            {
-                row["name"]: {
-                    "name": "AIA-" + row["name"].split(".")[-1],
-                    "category": "privacy",
-                }
-            }
-        )
-
     # remove all non used metrics
-    data = data[data["name"].apply(lambda x: x in metrics.keys())]
+    data = data[data["name"].isin(metrics.keys())]
 
     # add metric category as column
     data["category"] = data["name"].map(lambda x: metrics.get(x, {}).get("category", x))
@@ -306,7 +356,7 @@ def mann_whitney_tests(df, metrics):
             cat_ = "privacy"
             alternative = "two-sided"
 
-        for model_ in ["pategan", "ctgan", "adsgan", "tvae"]:
+        for model_ in ["dpgane1", "ctgan", "adsgan", "tvae"]:
 
             data1 = data[(data["model"] == "fasd") & (data["category"] == cat_)][
                 "score_rank"
@@ -446,7 +496,7 @@ if __name__ == "__main__":
     metrics = {
         "stats.jensenshannon_dist.marginal": {"name": "JS", "category": "fidelity"},
         # "stats.max_mean_discrepancy.joint": {"name": "MMD", "category": "fidelity"},
-        "stats.wasserstein_dist.joint": {"name": "Wasserstein", "category": "fidelity"},
+        # "stats.wasserstein_dist.joint": {"name": "Wasserstein", "category": "fidelity"},
         "stats.alpha_precision.delta_precision_alpha_OC": {
             "name": "a-precision",
             "category": "fidelity",
@@ -473,15 +523,15 @@ if __name__ == "__main__":
             "name": "d-presence",
             "category": "privacy",
         },
-        "privacy.k-anonymization.syn": {
-            "name": "k-anonymization",
-            "category": "privacy",
-        },
+        # "privacy.k-anonymization.syn": {
+        #     "name": "k-anonymization",
+        #     "category": "privacy",
+        # },
         "privacy.k-map.score": {"name": "k-map", "category": "privacy"},
-        "privacy.distinct l-diversity.syn": {
-            "name": "l-diversity",
-            "category": "privacy",
-        },
+        # "privacy.distinct l-diversity.syn": {
+        #     "name": "l-diversity",
+        #     "category": "privacy",
+        # },
         "privacy.identifiability_score.score_OC": {
             "name": "Identifiability",
             "category": "privacy",
@@ -490,10 +540,10 @@ if __name__ == "__main__":
             "name": "Membership Inference",
             "category": "privacy",
         },
-        "attack.data_leakage_xgb.mean": {
-            "name": "Attribute Inference",
-            "category": "privacy",
-        },
+        # "attack.data_leakage_xgb.mean": {
+        #     "name": "Attribute Inference",
+        #     "category": "privacy",
+        # },
         "stats.alpha_precision.authenticity_OC": {
             "name": "Authenticity",
             "category": "privacy",
@@ -518,6 +568,6 @@ if __name__ == "__main__":
     df = results
 
     format_table(df, metrics=metrics)
-    stripplot(df, metrics)
-    # mann_whitney_tests(df, metrics)
+    stripplot(df, metrics=metrics)
+    mann_whitney_tests(df, metrics)
     aia_deepdive_plot(df, ds="adult")

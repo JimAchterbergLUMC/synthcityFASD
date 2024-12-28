@@ -76,6 +76,7 @@ def tune(X_r, models, tune_params, path):
     for plugin, hparams in hp_space.items():
 
         def objective(trial: optuna.Trial):
+            clear_dir("workspace")
             params = suggest_all(trial, hparams)
             ID = f"trial_{trial.number}"
 
@@ -96,6 +97,9 @@ def tune(X_r, models, tune_params, path):
                             "xgb",
                         ],
                     },  # DELETE THIS LINE FOR ALL METRICS
+                    synthetic_cache=False,
+                    synthetic_reuse_if_exists=False,
+                    use_metric_cache=False,
                 )
             except Exception as e:  # invalid set of params
                 print(f"{type(e).__name__}: {e}")
@@ -163,6 +167,9 @@ def benchmark(ds, models, tune_params, metrics, repeats, split=1):
         if len(X_r) < 1000:
             params["batch_size"] = 32
             params["n_iter_min"] = 10
+
+        if name == "dpgan":
+            params["epsilon"] = 100
 
     # perform benchmarking
     score = Benchmarks.evaluate(
