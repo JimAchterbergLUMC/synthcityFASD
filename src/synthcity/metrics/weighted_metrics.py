@@ -100,9 +100,14 @@ class WeightedMetrics:
         score = 0
         eval_cnt = min(len(X_gt), len(X_syn))
 
+        # allow to specify whether intermediairy or post-hoc metric
+        # this is important to determine whether additional preprocessing is required
+        kwargs = {}
+        kwargs["intermediate"] = True
+
         for weight, metric in zip(self.weights, self.metrics):
             score += weight * metric.evaluate_default(
-                X_gt.sample(eval_cnt), X_syn.sample(eval_cnt)
+                X_gt.sample(eval_cnt), X_syn.sample(eval_cnt), **kwargs
             )
 
         return score

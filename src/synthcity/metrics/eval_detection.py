@@ -69,8 +69,15 @@ class DetectionEvaluator(MetricEvaluator):
         model_template: Any,
         X_gt: DataLoader,
         X_syn: DataLoader,
-        **model_args: Any,
+        **kwargs: Any,  # required to specify whether preprocessing is required
     ) -> Dict:
+        if "intermediate" in kwargs.keys():
+            intermediate = kwargs["intermediate"]
+            del kwargs["intermediate"]
+        else:
+            intermediate = False
+        model_args = kwargs
+
         cache_file = (
             self._workspace
             / f"sc_metric_cache_{self.type()}_{self.name()}_{X_gt.hash()}_{X_syn.hash()}_{self._reduction}_{platform.python_version()}.bkp"
@@ -120,10 +127,11 @@ class DetectionEvaluator(MetricEvaluator):
             test_data = data.loc[test_idx]
             test_labels = labels[test_idx]
 
-            # preprocess
-            train_data, test_data = preprocess_prediction(
-                train=train_data, test=test_data, discrete_features=discrete
-            )
+            # preprocess, but not if eval detection is being used as patience metric
+            if not intermediate:
+                train_data, test_data = preprocess_prediction(
+                    train=train_data, test=test_data, discrete_features=discrete
+                )
             if "n_units_in" in model_args:
                 model_args["n_units_in"] = train_data.shape[1]
 
@@ -150,8 +158,9 @@ class DetectionEvaluator(MetricEvaluator):
         self,
         X_gt: DataLoader,
         X_syn: DataLoader,
+        **kwargs,  # required to specify whether preprocessing is or isn't required
     ) -> float:
-        return self.evaluate(X_gt, X_syn)[self._reduction]
+        return self.evaluate(X_gt, X_syn, **kwargs)[self._reduction]
 
 
 class SyntheticDetectionXGB(DetectionEvaluator):
@@ -270,7 +279,12 @@ class SyntheticDetectionMLP(DetectionEvaluator):
         return results
 
     @validate_arguments(config=dict(arbitrary_types_allowed=True))
-    def evaluate(self, X_gt: DataLoader, X_syn: DataLoader) -> Dict:
+    def evaluate(
+        self,
+        X_gt: DataLoader,
+        X_syn: DataLoader,
+        **kwargs,  # required to specify whether preprocessing is required
+    ) -> Dict:
         if X_gt.type() == "images":
             return self._evaluate_image_detection(X_gt, X_syn)
 
@@ -280,11 +294,12 @@ class SyntheticDetectionMLP(DetectionEvaluator):
             "n_units_out": 2,
             "random_state": self._random_state,
         }
+        kwargs.update(model_args)
         return self._evaluate_detection_generic(
             MLP,
             X_gt,
             X_syn,
-            **model_args,
+            **kwargs,  # required to specify whether preprocessing is required
         )
 
 

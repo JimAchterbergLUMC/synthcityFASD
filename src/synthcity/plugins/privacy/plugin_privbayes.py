@@ -1,6 +1,7 @@
 """
 Reference: PrivBayes: Private Data Release via Bayesian Networks. (2017), Zhang J, Cormode G, Procopiuc CM, Srivastava D, Xiao X.
 """
+
 # stdlib
 from collections import namedtuple
 from itertools import combinations, product
@@ -486,7 +487,7 @@ class PrivBayes(Serializable):
     ) -> List:
         """Applied in Exponential Mechanism to sample outcomes."""
         delta_array = []
-        for (candidate, parents) in parents_pair_list:
+        for candidate, parents in parents_pair_list:
             sensitivity = self._calculate_sensitivity(data, candidate, parents)
             delta = self._calculate_delta(data, sensitivity)
             delta_array.append(delta)

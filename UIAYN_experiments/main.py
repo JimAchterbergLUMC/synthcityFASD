@@ -4,8 +4,8 @@ from utils import clear_dir
 if __name__ == "__main__":
     for ds in ["heart", "student", "credit", "adult"]:
         models = [
+            "dpgan",
             "fasd",
-            # "pategan",
             "tvae",
             "ctgan",
             "adsgan",
@@ -16,17 +16,13 @@ if __name__ == "__main__":
         metrics = {
             "stats": [
                 "jensenshannon_dist",
-                "max_mean_discrepancy",
-                "wasserstein_dist",
                 "alpha_precision",
             ],
             "performance": ["linear_model", "mlp", "xgb", "feat_rank_distance"],
             "detection": ["detection_xgb"],
             "privacy": [
                 "delta-presence",
-                "k-anonymization",
                 "k-map",
-                "distinct l-diversity",
                 "identifiability_score",
                 "DomiasMIA_BNAF",
             ],

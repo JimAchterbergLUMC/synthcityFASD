@@ -178,7 +178,7 @@ def stripplot(df, metrics):
     data["model"] = data["model"].map(
         {
             "fasd": "FASD",
-            "dpgane1": r"DP-GAN $\epsilon=1$",
+            "dpgan": r"DP-GAN",
             "adsgan": "AdsGAN",
             "tvae": "TVAE",
             "ctgan": "CTGAN",
@@ -263,7 +263,7 @@ def stripplot(df, metrics):
         .label(x="model", y="score_rank", marker="Dataset")
     )
 
-    fig, ax = plt.subplots(figsize=(12, 12))
+    fig, ax = plt.subplots(figsize=(8, 8))
 
     # plot results
     # l.on(ax).plot()
@@ -356,7 +356,7 @@ def mann_whitney_tests(df, metrics):
             cat_ = "privacy"
             alternative = "two-sided"
 
-        for model_ in ["dpgane1", "ctgan", "adsgan", "tvae"]:
+        for model_ in ["dpgan", "ctgan", "adsgan", "tvae"]:
 
             data1 = data[(data["model"] == "fasd") & (data["category"] == cat_)][
                 "score_rank"
@@ -401,6 +401,16 @@ def aia_deepdive_plot(df, ds):
 
     data["type"] = data["type"].apply(map_to_key, dict=config)
 
+    data["model"] = data["model"].map(
+        {
+            "fasd": "FASD",
+            "dpgan": r"DP-GAN",
+            "adsgan": "AdsGAN",
+            "tvae": "TVAE",
+            "ctgan": "CTGAN",
+        }
+    )
+
     # build separate plots for numerical and discrete features
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 
@@ -429,7 +439,8 @@ def aia_deepdive_plot(df, ds):
         )
         b.on(ax).plot()
 
-        d["name"] = d["name"].str[0] + d["name"].str[-1]
+        d["short_name"] = d["name"].str[0] + d["name"].str[-1]
+        d["name"] = d["name"] + " (" + d["short_name"] + ")"
 
         marker = "o" if type_ == "discrete" else "v"
         p = (
@@ -437,13 +448,13 @@ def aia_deepdive_plot(df, ds):
                 d,
                 x="model",
                 y="mean",
-                text="name",
+                text="short_name",
                 color="name",
             )
             .add(
                 so.Dot(marker=marker, pointsize=8, edgewidth=0, edgecolor="gray"),
                 so.Dodge(),
-                legend=False,
+                # legend=False,
             )
             .add(
                 so.Text(valign="bottom", halign="center"),
@@ -454,13 +465,13 @@ def aia_deepdive_plot(df, ds):
                 # y=so.Continuous().tick(every=1),
                 color=so.Nominal(sns.color_palette("bright")),
             )
-            # .label(
-            #     x="model",
-            #     y="mean",
-            #     color=(
-            #         "Discrete Features" if type_ == "discrete" else "Numerical Features"
-            #     ),
-            # )
+            .label(
+                x="model",
+                y="mean",
+                color=(
+                    "Discrete Features" if type_ == "discrete" else "Numerical Features"
+                ),
+            )
         )
 
         p.on(ax).plot()
@@ -477,13 +488,33 @@ def aia_deepdive_plot(df, ds):
         if type_ == "numerical":
             ax.set_yscale("symlog")
 
+        x_fasd = bar_d["model"].unique().tolist().index("FASD")
+        y_fasd = d[d["model"] == "FASD"]["mean"].max()
+        y_fasd += 0.05 * y_fasd if type_ == "discrete" else -2 * y_fasd
+        # Adjust as necessary
+
+        # if type_ == "discrete":
+        #     ax.set_ylim((0, 1))
+
+        # Annotate the "FASD" model with an arrow
+        factor = 0.15 if type_ == "discrete" else 10
+        ax.annotate(
+            "FASD",
+            xy=(x_fasd, y_fasd),  # Point to the position of "FASD"
+            xytext=(x_fasd, y_fasd + factor * y_fasd),  # Position of the text
+            arrowprops=dict(facecolor="black", arrowstyle="->"),  # Arrow properties
+            fontsize=10,
+            ha="center",  # Horizontal alignment
+            color="red",  # Color of the text
+        )
+
     # place the legends
-    # fig.legends[0].set_bbox_to_anchor((0.9, 0.75))
-    # fig.legends[1].set_bbox_to_anchor((0.9, 0.25))
+    fig.legends[0].set_bbox_to_anchor((0.9, 0.75))
+    fig.legends[1].set_bbox_to_anchor((0.9, 0.25))
     # Save the figure
     output_dir = "UIAYN_experiments/results_formatted"
     os.makedirs(output_dir, exist_ok=True)
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.savefig(
         f"{output_dir}/aia_deepdive.pdf",
         bbox_inches="tight",

@@ -82,7 +82,27 @@ def tune(X_r, models, tune_params, path):
 
             if len(X_r) < 1000:
                 params["batch_size"] = 32
-                params["n_iter_min"] = 10
+            if plugin == "dpgan":
+                # actually we use epsilon as the noise multiplier, so the relationship of exact epsilon is 1/noise multiplier
+                params["epsilon"] = 1
+                # set bounded activations to bound gradients to mitigate effect of clipping
+                # params["generator_nonlin"] = "tanh"
+                # params["discriminator_nonlin"] = "tanh"
+                # set gradient clipping in dp (no severe sample-level clipping to limit performance deterioration)
+                params["dp_max_grad_norm"] = 1
+                # decrease the lr
+                params["lr"] = 1e-3
+                params["n_iter_print"] = 10
+                params["patience"] = 10
+                params["n_iter_min"] = 1
+
+                # increase batch size for DP learning
+                if len(X_r) < 1000:
+                    params["batch_size"] = 64
+                elif len(X_r) < 10000:
+                    params["batch_size"] = 512
+                else:
+                    params["batch_size"] = 1024
 
             try:
                 report = Benchmarks.evaluate(
@@ -166,10 +186,23 @@ def benchmark(ds, models, tune_params, metrics, repeats, split=1):
     for name, plugin, params in evaluate:
         if len(X_r) < 1000:
             params["batch_size"] = 32
-            params["n_iter_min"] = 10
 
         if name == "dpgan":
-            params["epsilon"] = 100
+            # actually we use epsilon as the noise multiplier, so the relationship of exact epsilon is 1/noise multiplier
+            params["epsilon"] = 1
+            # set gradient clipping in dp (no severe sample-level clipping to limit performance deterioration)
+            params["dp_max_grad_norm"] = 1
+            params["n_iter_print"] = 10
+            params["patience"] = 10
+            params["n_iter_min"] = 1
+
+            # increase batch size for DP learning
+            if len(X_r) < 1000:
+                params["batch_size"] = 64
+            elif len(X_r) < 10000:
+                params["batch_size"] = 512
+            else:
+                params["batch_size"] = 1024
 
     # perform benchmarking
     score = Benchmarks.evaluate(

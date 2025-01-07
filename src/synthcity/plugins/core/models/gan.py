@@ -449,7 +449,10 @@ class GAN(nn.Module):
                 errD_fake.backward(retain_graph=True)
 
                 self.discriminator.enable_hooks()
-                errD_real.backward()  # HACK: calling bkwd without zero_grad() accumulates param gradients
+                # bug: backprop MINUS error from real data
+                (
+                    -errD_real
+                ).backward()  # HACK: calling bkwd without zero_grad() accumulates param gradients
             else:
                 penalty.backward(retain_graph=True)
                 errD.backward()
@@ -596,16 +599,29 @@ class GAN(nn.Module):
                 self.discriminator,
                 self.discriminator.optimizer,
                 loader,
-            ) = privacy_engine.make_private_with_epsilon(
+            ) = privacy_engine.make_private(
                 module=self.discriminator,
                 optimizer=self.discriminator.optimizer,
                 data_loader=loader,
-                epochs=self.generator_n_iter,
-                target_epsilon=self.dp_epsilon,
-                target_delta=self.dp_delta,
+                noise_multiplier=self.dp_epsilon,
                 max_grad_norm=self.dp_max_grad_norm,
                 poisson_sampling=False,
             )
+
+            # (
+            #     self.discriminator,
+            #     self.discriminator.optimizer,
+            #     loader,
+            # ) = privacy_engine.make_private_with_epsilon(
+            #     module=self.discriminator,
+            #     optimizer=self.discriminator.optimizer,
+            #     data_loader=loader,
+            #     epochs=self.generator_n_iter,
+            #     target_epsilon=self.dp_epsilon,
+            #     target_delta=self.dp_delta,
+            #     max_grad_norm=self.dp_max_grad_norm,
+            #     poisson_sampling=False,
+            # )
 
         # Train loop
         patience_score = self._init_patience_score()
@@ -641,6 +657,9 @@ class GAN(nn.Module):
 
         if best_state_dict is not None:
             self.load_state_dict(best_state_dict)
+
+        if self.dp_enabled:
+            print(f"Epsilon is: {privacy_engine.get_epsilon(self.dp_delta)}")
 
         return self
 

@@ -126,7 +126,7 @@ class DPGANPlugin(Plugin):
         random_state: int = 0,
         clipping_value: int = 1,
         lambda_gradient_penalty: float = 10,
-        encoder_max_clusters: int = 5,
+        encoder_max_clusters: int = 10,  # similar to CTGAN
         encoder: Any = None,
         dataloader_sampler: Optional[sampler.Sampler] = None,
         device: Any = DEVICE,

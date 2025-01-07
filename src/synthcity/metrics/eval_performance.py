@@ -111,6 +111,9 @@ class PerformanceEvaluator(MetricEvaluator):
 
         encoder = LabelEncoder().fit(labels)
         enc_y_train = encoder.transform(y_train)
+        if len(np.unique(enc_y_train)) == 1:
+            print("Only 1 type of train label supplied")
+            print(enc_y_train)
         if "n_units_out" in model_args:
             model_args["n_units_out"] = len(np.unique(y_train))
             model_args["n_units_in"] = X_train.shape[1]
@@ -121,7 +124,8 @@ class PerformanceEvaluator(MetricEvaluator):
             score, _ = evaluate_auc(enc_y_test, y_pred)
         except BaseException as e:
             log.error(f"classifier evaluation failed {e}.")
-            score = 0
+            # score should be 0.5 (random) when no labels are present, since we only predict one of the labels
+            score = 0.5
 
         return score
 
@@ -201,7 +205,6 @@ class PerformanceEvaluator(MetricEvaluator):
         syn_scores_ood = []
 
         for train_idx, test_idx in skf.split(id_X_gt, id_y_gt):
-            # preprocess prediction is not working!
             # preprocess input features (especially relevant for MLP and LR)
             train_real, test_real = preprocess_prediction(
                 train=id_X_gt.loc[train_idx],
@@ -242,6 +245,10 @@ class PerformanceEvaluator(MetricEvaluator):
                 np.asarray(test_syn_ood),
                 np.asarray(ood_y_gt),
             )
+
+            print(train_real)
+            print(test_real)
+            print(real_score)
 
             real_scores.append(real_score)
             syn_scores_id.append(synth_score_id)

@@ -185,6 +185,14 @@ class TabularGAN(torch.nn.Module):
         if X[column_info["target_column"]].nunique() < 10:
             discrete_columns.append(column_info["target_column"])
 
+        # if dp_enabled:
+        #     # for DPGAN use regular scaling, not mode specific normalization
+        #     self.encoder = TabularEncoder(
+        #         continuous_encoder="minmax",
+        #         cont_encoder_params={"feature_range": (-1, 1)},
+        #         whitelist=encoder_whitelist,
+        #     ).fit(X, discrete_columns=discrete_columns)
+        # else:
         self.encoder = TabularEncoder(
             max_clusters=encoder_max_clusters, whitelist=encoder_whitelist
         ).fit(X, discrete_columns=discrete_columns)
