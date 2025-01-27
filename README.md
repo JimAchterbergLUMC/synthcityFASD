@@ -4,14 +4,7 @@ Experiments from the paper can be reproduced through the main.py script in the U
 Names of the datasets can be found in the datasets.json file. 
 When reproducing experiments, it is heavily recommended to use GPUs to accelerate the training of the deep learning algorithms.
 
-When reproducing DP-GAN, add the following lines of code in the Opacus library to ensure proper evaluation for large epsilon:
-In opacus->accountants->utils->get_noise_multiplier:
-# change initial bounds of sigma to account for extreme epsilon values
-sigma_low, sigma_high = 0, np.sqrt(np.log(1/target_delta)/target_epsilon)
-# change epsilon tolerance to depend on size of epsilon (large epsilon means less precision required)
-epsilon_tolerance *= target_epsilon
 
-You might also choose to reduce the scaling factor from 2 to somewhere in (1,2) for improved precision.
 
 <h2 align="center">
   <img src="https://github.com/vanderschaarlab/synthcity/raw/main/docs/logo.png" height="150px">
