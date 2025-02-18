@@ -140,6 +140,7 @@ def tune(X_r, models, tune_params, path):
 
 def benchmark(ds, models, tune_params, metrics, repeats, split=1):
     # load data
+    print("2")
     with open("UIAYN_experiments/datasets.json", "r") as f:
         config = json.load(f)
     config = config[ds]
@@ -150,7 +151,10 @@ def benchmark(ds, models, tune_params, metrics, repeats, split=1):
     else:
         X = None
         y = None
+    print("3")
     df = preprocess(X=X, y=y, config=config)
+
+    print(df)
 
     # for testing purposes
     if split < 1:
