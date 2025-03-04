@@ -24,7 +24,7 @@ from synthcity.plugins.core.schema import Schema
 from synthcity.utils.constants import DEVICE
 
 
-class FASDPlugin2(Plugin):
+class FASD2Plugin(Plugin):
     """
     .. inheritance-diagram:: synthcity.plugins.generic.plugin_tvae.TVAEPlugin
         :parts: 1
@@ -95,24 +95,24 @@ class FASDPlugin2(Plugin):
         self,
         n_iter: int = 1000,
         task_type="classification",
-        n_units_embedding: int = 200,
+        n_units_embedding: int = 100,
         lr: float = 1e-3,
         weight_decay: float = 1e-5,
         batch_size: int = 200,
         random_state: int = 0,
-        encoder_n_layers_hidden: int = 1,
-        encoder_n_units_hidden: int = 200,
-        encoder_nonlin: str = "leaky_relu",
+        encoder_n_layers_hidden: int = 2,
+        encoder_n_units_hidden: int = 100,
+        encoder_nonlin: str = "relu",
         encoder_dropout: float = 0.1,
         predictor_n_layers_hidden: int = 0,
         predictor_n_units_hidden: int = 0,
         predictor_nonlin: str = "none",
         predictor_dropout: float = 0,
-        loss_factor: int = 1,
+        loss_factor: int = 10,
         clipping_value: int = 1,
-        n_iter_print: int = 50,
-        n_iter_min: int = 100,
-        patience: int = 5,
+        n_iter_print: int = 10,
+        n_iter_min: int = 30,
+        patience: int = 50,
         # core plugin arguments
         device: Any = DEVICE,
         workspace: Path = Path("workspace"),
@@ -140,7 +140,7 @@ class FASDPlugin2(Plugin):
         self.predictor_n_layers_hidden = predictor_n_layers_hidden
         self.predictor_n_units_hidden = predictor_n_units_hidden
         self.predictor_nonlin = predictor_nonlin
-        self.predictor_batch_norm = 0
+        self.predictor_batch_norm = False
         self.predictor_dropout = predictor_dropout
         self.predictor_residual = False
         # Encoder
@@ -169,22 +169,11 @@ class FASDPlugin2(Plugin):
     @staticmethod
     def hyperparameter_space(**kwargs: Any) -> List[Distribution]:
         return [
-            IntegerDistribution(
-                name="fasd_n_units_embedding", low=50, high=150, step=50
-            ),
-            IntegerDistribution(name="n_iter", low=100, high=500, step=100),
+            IntegerDistribution(name="n_units_embedding", low=50, high=250, step=50),
             CategoricalDistribution(name="lr", choices=[1e-3, 2e-4, 1e-4]),
-            IntegerDistribution(name="decoder_n_layers_hidden", low=1, high=3),
+            CategoricalDistribution(name="loss_factor", choices=[0.1, 1, 2, 5, 10]),
             CategoricalDistribution(name="weight_decay", choices=[1e-3, 1e-4]),
             CategoricalDistribution(name="batch_size", choices=[64, 128, 256, 512]),
-            IntegerDistribution(name="n_units_embedding", low=50, high=250, step=50),
-            IntegerDistribution(
-                name="decoder_n_units_hidden", low=50, high=250, step=50
-            ),
-            CategoricalDistribution(
-                name="decoder_nonlin", choices=["relu", "leaky_relu", "tanh", "elu"]
-            ),
-            FloatDistribution(name="decoder_dropout", low=0, high=0.2),
             IntegerDistribution(name="encoder_n_layers_hidden", low=1, high=3),
             IntegerDistribution(
                 name="encoder_n_units_hidden", low=50, high=250, step=50
@@ -196,7 +185,7 @@ class FASDPlugin2(Plugin):
             FloatDistribution(name="encoder_dropout", low=0, high=0.2),
         ]
 
-    def _fit(self, X: DataLoader, *args: Any, **kwargs: Any) -> "FASDPlugin2":
+    def _fit(self, X: DataLoader, *args: Any, **kwargs: Any) -> "FASD2Plugin":
 
         self.model = TabularFASD2(
             X=X.dataframe(),
@@ -229,9 +218,9 @@ class FASDPlugin2(Plugin):
             device=self.device,
             clipping_value=self.clipping_value,
             # early stopping
-            n_iter_min=30,  # self.n_iter_min,
+            n_iter_min=self.n_iter_min,  # self.n_iter_min,
             n_iter_print=self.n_iter_print,
-            patience=50,  # self.patience,
+            patience=self.patience,  # self.patience,
         )
         self.model.fit(X.dataframe(), **kwargs)
 
@@ -241,4 +230,4 @@ class FASDPlugin2(Plugin):
         return self._safe_generate(self.model.generate, count, syn_schema)
 
 
-plugin = FASDPlugin2
+plugin = FASD2Plugin

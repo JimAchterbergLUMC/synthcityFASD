@@ -246,10 +246,6 @@ class PerformanceEvaluator(MetricEvaluator):
                 np.asarray(ood_y_gt),
             )
 
-            print(train_real)
-            print(test_real)
-            print(real_score)
-
             real_scores.append(real_score)
             syn_scores_id.append(synth_score_id)
             syn_scores_ood.append(synth_score_ood)

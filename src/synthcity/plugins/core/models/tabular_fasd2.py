@@ -17,7 +17,7 @@ from synthcity.plugins.core.dataloader import DataLoader
 # synthcity relative
 from .tabular_encoder import TabularEncoder
 from .vae import VAE
-from .fasd import FASD, FASD_Decoder
+from .fasd2 import FASD
 
 
 class TabularFASD2(nn.Module):

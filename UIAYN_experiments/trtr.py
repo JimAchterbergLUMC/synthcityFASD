@@ -137,13 +137,10 @@ ds = "heart"
 with open("UIAYN_experiments/datasets.json", "r") as f:
     config = json.load(f)
 config = config[ds]
-if config["loadable"] == "yes":
-    dataset = fetch_ucirepo(id=config["id"])
-    X = dataset.data.features
-    y = dataset.data.targets
-else:
-    X = None
-    y = None
+dataset = fetch_ucirepo(id=config["id"])
+X = dataset.data.features
+y = dataset.data.targets
+
 df = preprocess(X=X, y=y, config=config)
 
 # required for MLP

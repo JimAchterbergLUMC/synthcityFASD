@@ -171,8 +171,12 @@ class TabularFASD(nn.Module):
         self.fasd_model.fit(X_enc, y_enc)
         X_rep = self.fasd_model.encode(X_enc)
 
-        # fit a passthrough encoder to get input data layout for VAE
+        # preprocess representations for proper input to VAE
         self.encoder = TabularEncoder(
+            # continuous_encoder="minmax",
+            # cont_encoder_params={
+            #    "feature_range": (-1, 1)
+            # },
             continuous_encoder="passthrough",
             cont_encoder_params={},
             categorical_encoder="passthrough",
@@ -184,7 +188,7 @@ class TabularFASD(nn.Module):
         )  # no discrete columns in representations
         X_rep = self.encoder.transform(X_rep)
 
-        # train the decoder (clamped representations to original input features)
+        # train the decoder (preprocessed representations to original input features)
         self.fasd_decoder = FASD_Decoder(
             n_units_in=self.encoder.n_features(),
             n_units_hidden=fasd_decoder_n_units_hidden,  # shallow decoder
@@ -370,18 +374,19 @@ class TabularFASD(nn.Module):
         cond: Optional[Union[pd.DataFrame, pd.Series, np.ndarray]] = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
-        # draw clamped representations from the VAE
+        # draw (-1,1) representations from the VAE
         samples = pd.DataFrame(self(count, cond))
 
-        # predict targets from synthetic representations (remove any tabular encoding on representations, although this is currently none)
+        # predict targets from synthetic representations (in original non-encoded representation space)
         y = self.fasd_model.predict(self.encoder.inverse_transform(samples))
         # remove target encoding
         y = self.target_encoder.inverse_transform(y)
 
-        # decode synthetic (clamped) representations to original data space
+        # decode synthetic representations to original data space
+        # decoder is trained using encoded (-1,1) representations so no inverse transform required
         samples = self.fasd_decoder.decode(samples)
 
-        # remove tabular encoding of the reconstructed input features
+        # remove original preprocessing of the reconstructed input features
         samples = self.data_encoder.inverse_transform(samples)
 
         # attach targets to synthetic data

@@ -362,10 +362,14 @@ class FASD(nn.Module):
 
         stratify = None
         if self.task_type == "classification":
-            stratify = y
+            stratify = y.detach().cpu().numpy()
 
         X, X_val, y, y_val = train_test_split(
-            X, y, stratify=stratify, train_size=0.8, random_state=self.random_state
+            X.detach().cpu().numpy(),
+            y.detach().cpu().numpy(),
+            stratify=stratify,
+            train_size=0.8,
+            random_state=self.random_state,
         )
         Xt = self._check_tensor(X)
         Xt_val = self._check_tensor(X_val)
@@ -400,7 +404,7 @@ class FASD(nn.Module):
                 pred = self.predictor(embedding)
                 loss = self._loss_function(
                     pred,
-                    y,
+                    y.float(),
                     mu,
                     logvar,
                 )
@@ -477,48 +481,6 @@ class FASD(nn.Module):
             raise RuntimeError("NaNs detected in the KLD_loss")
 
         return pred_loss * self.loss_factor + KLD_loss
-
-    def reconstruction_loss(self, X: Tensor):
-        # pass data through model, without gradients
-        with torch.no_grad():
-            mu, logvar = self.encoder(X, None)
-            embedding = self._reparameterize(mu, logvar)
-            reconstructed = self.decoder(embedding, None)
-
-            # Initialize per-sample loss
-            reconstruction_loss = torch.zeros(X.size(0), device=X.device)
-
-            step = 0
-            for activation, length in self.decoder_nonlin_out:
-                step_end = step + length
-                if activation == "softmax":
-                    # Compute loss per sample for discrete features
-                    discr_loss = nn.NLLLoss(reduction="none")(
-                        torch.log(reconstructed[:, step:step_end] + 1e-8),
-                        torch.argmax(X[:, step:step_end], dim=-1),
-                    )
-                    # Sum over the feature dimension
-                    reconstruction_loss += discr_loss.sum(dim=-1)
-                else:
-                    # Compute loss per sample for continuous features
-                    diff = reconstructed[:, step:step_end] - X[:, step:step_end]
-                    cont_loss = (diff**2).sum(dim=-1)  # Sum over the feature dimension
-                    reconstruction_loss += cont_loss
-
-                step = step_end
-
-            if step != reconstructed.size(1):
-                raise RuntimeError(
-                    f"Invalid reconstructed features. Expected {step}, got {reconstructed.shape}"
-                )
-
-            KLD_loss = -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1)
-            # during training we might use a loss factor, but not for determining true ELBO loss
-            # loss_factor = self.loss_factor
-            loss_factor = 1
-            elbo = -(reconstruction_loss * loss_factor + KLD_loss)
-
-        return elbo.cpu().detach().numpy()  # Return per-sample losses
 
 
 class FASD_Decoder(nn.Module):

@@ -158,7 +158,6 @@ def stripplot(df, metrics):
     data = pd.concat([data, aia], axis=0, ignore_index=True)
 
     # for each metric in each dataset rank the mean score
-    # dit gaat fout voor aia
     data["score_rank"] = data.groupby(["ds", "name"]).rank()["mean"]
     # for direction==maximize invert the ranking so rank of 1 is the best
     data["score_rank"] = np.where(

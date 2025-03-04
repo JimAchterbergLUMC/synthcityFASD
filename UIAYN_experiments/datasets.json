@@ -1,7 +1,6 @@
 {
     "heart": {
         "name": "heart",
-        "loadable": "yes",
         "id": 45,
         "discrete": [
             "sex",
@@ -39,7 +38,6 @@
     },
     "student": {
         "name": "student",
-        "loadable": "yes",
         "id": 697,
         "discrete": [
             "Marital Status",
@@ -123,7 +121,6 @@
     },
     "adult": {
         "name": "adult",
-        "loadable": "yes",
         "id": 2,
         "discrete": [
             "sex",
@@ -161,7 +158,6 @@
     },
     "credit": {
         "name": "credit",
-        "loadable": "yes",
         "id": 350,
         "discrete": [
             "sex",

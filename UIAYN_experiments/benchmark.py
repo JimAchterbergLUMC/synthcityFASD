@@ -10,6 +10,8 @@ from synthcity.utils.optuna_sample import suggest_all
 from synthcity.plugins import Plugins
 import optuna
 
+import traceback
+
 
 def tune(X_r, models, tune_params, path):
     # save hparams in separate files
@@ -26,6 +28,12 @@ def tune(X_r, models, tune_params, path):
             "encoder_n_layers_hidden",
             "encoder_n_units_hidden",
         ],
+        # "fasd2": [
+        #     "n_units_embedding",
+        #     "encoder_n_layers_hidden",
+        #     "encoder_n_units_hidden",
+        #     "loss_factor",
+        # ],
         "adsgan": [
             "discriminator_n_layers_hidden",
             "discriminator_n_units_hidden",
@@ -124,6 +132,7 @@ def tune(X_r, models, tune_params, path):
             except Exception as e:  # invalid set of params
                 print(f"{type(e).__name__}: {e}")
                 print(params)
+                print(traceback.print_exc())
                 raise optuna.TrialPruned()
             score = report[ID].query('direction == "maximize"')["mean"].mean()
             # average score across all metrics with direction="minimize"
@@ -140,21 +149,14 @@ def tune(X_r, models, tune_params, path):
 
 def benchmark(ds, models, tune_params, metrics, repeats, split=1):
     # load data
-    print("2")
     with open("UIAYN_experiments/datasets.json", "r") as f:
         config = json.load(f)
     config = config[ds]
-    if config["loadable"] == "yes":
-        dataset = fetch_ucirepo(id=config["id"])
-        X = dataset.data.features
-        y = dataset.data.targets
-    else:
-        X = None
-        y = None
-    print("3")
-    df = preprocess(X=X, y=y, config=config)
+    dataset = fetch_ucirepo(id=config["id"])
+    X = dataset.data.features
+    y = dataset.data.targets
 
-    print(df)
+    df = preprocess(X=X, y=y, config=config)
 
     # for testing purposes
     if split < 1:

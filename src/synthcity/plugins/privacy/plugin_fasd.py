@@ -111,11 +111,11 @@ class FASDPlugin(Plugin):
         fasd_n_units_embedding: int = 100,
         fasd_encoder_n_layers_hidden: int = 0,  # shallow encoder
         fasd_encoder_n_units_hidden: int = 0,
-        fasd_encoder_nonlin: str = "none",  # simple representations
+        fasd_encoder_nonlin: str = "none",  # "tanh",
         fasd_encoder_dropout: float = 0.1,
         fasd_decoder_n_layers_hidden: int = 0,  # shallow decoder
         fasd_decoder_n_units_hidden: int = 0,
-        fasd_decoder_nonlin: str = "none",
+        fasd_decoder_nonlin: str = "none",  # "tanh",
         fasd_decoder_dropout: float = 0.1,
         loss_factor: int = 1,
         data_encoder_max_clusters: int = 10,
