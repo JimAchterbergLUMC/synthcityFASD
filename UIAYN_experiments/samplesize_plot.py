@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+
 import seaborn as sns
 import numpy as np
 from synthcity.metrics.eval_performance import PerformanceEvaluatorXGB
@@ -7,7 +8,6 @@ from synthcity.plugins.core.dataloader import GenericDataLoader
 from utils import preprocess
 from ucimlrepo import fetch_ucirepo
 import json
-import os
 from utils import clear_dir
 import random
 from synthcity.utils.reproducibility import enable_reproducible_results
@@ -51,16 +51,7 @@ def _get_results(ds, sample_sizes, models, n_runs):
 
             # Fit SD generator
             model = Plugins().get(model_name, **hparams)
-            model.fit(X)
-
-            X_gt = GenericDataLoader(
-                data=X.test().dataframe(),
-                sensitive_features=config["sensitive"],
-                discrete_features=config["discrete"],
-                target_column="target",
-                random_state=random_state,
-                train_size=train_size,
-            )
+            model.fit(X.train())
 
             # Generate SD and evaluate TSTR
             for N in sample_sizes:
@@ -73,7 +64,7 @@ def _get_results(ds, sample_sizes, models, n_runs):
                     random_state=random_state,
                     train_size=train_size,
                 )
-                result = PerformanceEvaluatorXGB().evaluate(X_gt, X_syn)
+                result = PerformanceEvaluatorXGB().evaluate(X.test(), X_syn)
                 all_results[model_name][str(N)].append(result["syn_ood"])
             clear_dir("workspace")
     return all_results
@@ -82,7 +73,7 @@ def _get_results(ds, sample_sizes, models, n_runs):
 ds = "adult"
 n_runs = 10
 models = [
-    "dpgan",
+    # "dpgan",
     "fasd",
     "tvae",
     "ctgan",
@@ -90,10 +81,8 @@ models = [
 ]
 
 
-# Generate 10 values in log space between 250-250k
-sample_sizes = np.logspace(
-    np.log10(10000), np.log10(250000), num=20, base=10, dtype=int
-)
+# Generate 10 values in log space between 5k-250k
+sample_sizes = np.logspace(np.log10(5e3), np.log10(250e3), num=10, base=10, dtype=int)
 
 all_results = _get_results(
     ds=ds,
@@ -105,30 +94,59 @@ all_results = _get_results(
 with open("UIAYN_experiments/samplesize_plot.json", "w") as f:
     json.dump(all_results, f)
 
+
 with open("UIAYN_experiments/samplesize_plot.json", "r") as f:
     all_results = json.load(f)
 
+# map model names and sample sizes to correct names for plot
+mapper = {"fasd": "FASD", "adsgan": "AdsGAN", "ctgan": "CTGAN", "tvae": "TVAE"}
+models = [mapper[k] for k in models]
+all_results = {mapper.get(k, k): v for k, v in all_results.items()}
+sample_sizes_mapper = {}
+for s in sample_sizes:
+    sample_sizes_mapper.update({str(s): str(s / 9768)})
+sample_sizes = [(sample_sizes_mapper.get(str(item), item)) for item in sample_sizes]
+all_results = {
+    outer_key: {
+        sample_sizes_mapper.get(inner_key, inner_key): value
+        for inner_key, value in inner_dict.items()
+    }
+    for outer_key, inner_dict in all_results.items()
+}
+
 # Plot results
-fig, axs = plt.subplots(figsize=(10, 10))
+fig, axs = plt.subplots(figsize=(10, 5))
+
 for model_name in models:
     means = [np.mean(all_results[model_name][str(N)]) for N in sample_sizes]
     stds = [np.std(all_results[model_name][str(N)]) for N in sample_sizes]
-    sns.lineplot(x=sample_sizes, y=means, label=model_name, ax=axs)
+    sns.lineplot(
+        x=np.array(sample_sizes, dtype=float),
+        y=means,
+        label=model_name,
+        ax=axs,
+        marker="o",
+    )
     axs.fill_between(
-        sample_sizes,
+        np.array(sample_sizes, dtype=float),
         np.array(means) - np.array(stds),
         np.array(means) + np.array(stds),
         alpha=0.3,
     )
 
-plt.axhline(y=0.927, color="b", linestyle="--", label="TRTR (AUROC)")
-plt.axvline(x=50000, color="b", linestyle="--", label="RD Sample Size")
+plt.axhline(y=0.927, color="b", linestyle="--", label="Train Real Test Real")
+plt.axvline(x=1, color="gray", linestyle="--", label="Real Data Test Size")
 
 # Put x-axis on log scale
+
 plt.xscale("log")
-plt.xlabel("Log N")
-plt.ylabel("TSTR (AUROC)")
-plt.ylim((0.5, 1))
-plt.title("Sample Size vs Performance for Different Models")
-plt.legend()
-plt.savefig("UIAYN_experiments/results/samplesplot.png")
+ticks = [0.5, 1, 2, 4, 8, 16, 32]
+plt.xticks(ticks, ticks)
+plt.minorticks_off()
+plt.xlabel(r"$N_{Synthetic}/N_{Real}$", fontsize=12)
+plt.ylabel("Train Synthetic Test Real (AUROC)", fontsize=12)
+
+
+# plt.ylim((0.83, 0.95))
+plt.legend(loc="upper right", fontsize=12, ncols=3)
+plt.savefig("UIAYN_experiments/results/samplesplot.pdf")
