@@ -1,6 +1,6 @@
 Repository of the paper entitled: "Fidelity Agnostic Synthetic Data Generation Improves Utility Whilst Retaining Privacy".
 
-Experiments from the paper can be reproduced through the main.py script in the UIAYN_experiments folder. 
+Experiments from the paper can be reproduced through the main.py script in the FASD_experiments folder. 
 Names of the datasets can be found in the datasets.json file. 
 When reproducing experiments, it is heavily recommended to use GPUs to accelerate the training of the deep learning algorithms.
 
