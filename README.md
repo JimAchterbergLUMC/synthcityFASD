@@ -1,4 +1,4 @@
-Repository of the paper entitled: "Utility Is All You Need: fidelity-agnostic synthetic data generation".
+Repository of the paper entitled: "Fidelity Agnostic Synthetic Data Generation Improves Utility Whilst Retaining Privacy".
 
 Experiments from the paper can be reproduced through the main.py script in the UIAYN_experiments folder. 
 Names of the datasets can be found in the datasets.json file. 
