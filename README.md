@@ -1,8 +1,21 @@
-Repository of the paper entitled: "Fidelity Agnostic Synthetic Data Generation Improves Utility Whilst Retaining Privacy".
+Repository of the paper entitled: "Fidelity Agnostic Synthetic Data Generation Improves Utility Whilst Retaining Privacy", published in Cell Patterns. 
 
 Experiments from the paper can be reproduced through the main.py script in the FASD_experiments folder. 
 Names of the datasets can be found in the datasets.json file. 
 When reproducing experiments, it is heavily recommended to use GPUs to accelerate the training of the deep learning algorithms.
+
+If you wish to use our method for your own experiments, consider using the much simpler [PyPI package](https://github.com/JimAchterbergLUMC/fasd) implementation.
+
+If you use our method please cite: 
+```bibtex
+@article{achterberg2025fidelity,
+  title={Fidelity-agnostic synthetic data generation improves utility while retaining privacy},
+  author={Achterberg, Jim and Haas, Marcel and van Dijk, Bram and Spruit, Marco},
+  journal={Patterns},
+  year={2025},
+  publisher={Elsevier}
+}
+```
 
 
 
